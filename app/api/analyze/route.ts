@@ -84,69 +84,110 @@ export async function POST(request: Request) {
 ]
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              inlineData: {
-                mimeType: file.type,
-                data: base64Data,
+    function isTransientError(err: unknown): boolean {
+      if (!err) return false;
+      const msg = err instanceof Error ? err.message : String(err);
+      const status = (err as Record<string, unknown>)?.status || (err as Record<string, unknown>)?.statusCode;
+
+      if (status === 503 || status === 429) return true;
+
+      const lowerMsg = msg.toLowerCase();
+      return (
+        lowerMsg.includes("503") ||
+        lowerMsg.includes("unavailable") ||
+        lowerMsg.includes("high demand") ||
+        lowerMsg.includes("resource_exhausted") ||
+        lowerMsg.includes("rate limit") ||
+        lowerMsg.includes("temporarily") ||
+        lowerMsg.includes("overloaded")
+      );
+    }
+
+    async function callGeminiWithRetry<T>(
+      fn: () => Promise<T>,
+      maxRetries = 3
+    ): Promise<T> {
+      let lastError: unknown;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          return await fn();
+        } catch (err) {
+          lastError = err;
+          if (attempt === maxRetries || !isTransientError(err)) {
+            throw err;
+          }
+          const delayMs = Math.pow(2, attempt) * 1000;
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+      throw lastError;
+    }
+
+    const response = await callGeminiWithRetry(() =>
+      ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                inlineData: {
+                  mimeType: file.type,
+                  data: base64Data,
+                },
               },
-            },
-            {
-              text: systemPrompt,
-            },
-          ],
-        },
-      ],
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              date: { type: Type.STRING },
-              payee: { type: Type.STRING },
-              description: { type: Type.STRING },
-              amount: { type: Type.STRING },
-              debitAccount: { type: Type.STRING },
-              debitSubAccount: { type: Type.STRING },
-              debitTaxType: { type: Type.STRING },
-              debitAmount: { type: Type.STRING },
-              creditAccount: { type: Type.STRING },
-              creditSubAccount: { type: Type.STRING },
-              creditTaxType: { type: Type.STRING },
-              creditAmount: { type: Type.STRING },
-              summary: { type: Type.STRING },
-              uncertainFields: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING },
+              {
+                text: systemPrompt,
               },
-            },
-            required: [
-              "date",
-              "payee",
-              "description",
-              "amount",
-              "debitAccount",
-              "debitSubAccount",
-              "debitTaxType",
-              "debitAmount",
-              "creditAccount",
-              "creditSubAccount",
-              "creditTaxType",
-              "creditAmount",
-              "summary",
-              "uncertainFields",
             ],
           },
+        ],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                date: { type: Type.STRING },
+                payee: { type: Type.STRING },
+                description: { type: Type.STRING },
+                amount: { type: Type.STRING },
+                debitAccount: { type: Type.STRING },
+                debitSubAccount: { type: Type.STRING },
+                debitTaxType: { type: Type.STRING },
+                debitAmount: { type: Type.STRING },
+                creditAccount: { type: Type.STRING },
+                creditSubAccount: { type: Type.STRING },
+                creditTaxType: { type: Type.STRING },
+                creditAmount: { type: Type.STRING },
+                summary: { type: Type.STRING },
+                uncertainFields: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING },
+                },
+              },
+              required: [
+                "date",
+                "payee",
+                "description",
+                "amount",
+                "debitAccount",
+                "debitSubAccount",
+                "debitTaxType",
+                "debitAmount",
+                "creditAccount",
+                "creditSubAccount",
+                "creditTaxType",
+                "creditAmount",
+                "summary",
+                "uncertainFields",
+              ],
+            },
+          },
         },
-      },
-    });
+      })
+    );
 
     const responseText = response.text || "";
     if (!responseText) {
