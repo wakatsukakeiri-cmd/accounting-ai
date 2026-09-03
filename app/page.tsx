@@ -688,17 +688,14 @@ export default function Home() {
     if (!summary.canExport || summary.exportEntries.length === 0) return;
 
     const isBankbook = appMode === "bankbook";
-    const blob = isBankbook
-      ? generateYayoiTxtBlob(summary.exportEntries)
-      : generateYayoiCsvBlob(summary.exportEntries);
+    const blob = generateYayoiCsvBlob(summary.exportEntries);
 
     const url = URL.createObjectURL(blob);
 
     const nowStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     const prefix = isBankbook ? "Yayoi_Bankbook" : "Yayoi_Receipt";
     const selectedTag = summary.isSelectionActive ? "_Selected" : "";
-    const ext = isBankbook ? "txt" : "csv";
-    const fileName = `${prefix}${selectedTag}_Journal_${nowStr}.${ext}`;
+    const fileName = `${prefix}${selectedTag}_Journal_${nowStr}.csv`;
 
     const a = document.createElement("a");
     a.href = url;
@@ -1626,8 +1623,8 @@ export default function Home() {
                   >
                     <span>
                       {summary.isSelectionActive
-                        ? `弥生会計用${appMode === "bankbook" ? "テキスト" : "CSV"} (選択した ${summary.exportEntries.length} 件の仕訳) をダウンロード (${appMode === "bankbook" ? ".txt" : ".csv"})`
-                        : `弥生会計用${appMode === "bankbook" ? "テキスト" : "CSV"} (全 ${summary.totalEntries} 件の仕訳) をダウンロード (${appMode === "bankbook" ? ".txt" : ".csv"})`}
+                        ? `弥生会計用CSV (選択した ${summary.exportEntries.length} 件の仕訳) をダウンロード (.csv)`
+                        : `弥生会計用CSV (全 ${summary.totalEntries} 件の仕訳) をダウンロード (.csv)`}
                     </span>
                   </button>
                 </div>
@@ -1676,7 +1673,7 @@ export default function Home() {
               <h3 className="text-lg font-bold text-slate-900">要確認項目が残っています</h3>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              仕訳の中に「要確認」の項目が含まれています。このまま弥生会計26用{appMode === "bankbook" ? "テキスト(.txt)" : "CSV(.csv)"}をダウンロードしますか？
+              仕訳の中に「要確認」の項目が含まれています。このまま弥生会計26用CSV (.csv) をダウンロードしますか？
             </p>
 
             <div className="max-h-40 overflow-y-auto rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
