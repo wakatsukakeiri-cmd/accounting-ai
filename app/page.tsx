@@ -7,9 +7,11 @@ import {
   ReceiptFileItem,
   AppMode,
   AnalysisHistoryItem,
+  PageDetail,
 } from "@/types/journal";
 import { generateYayoiCsvBlob, generateYayoiTxtBlob } from "@/lib/yayoi";
 import { runWithConcurrencyLimit } from "@/lib/queue";
+import { convertPdfToHighResImages } from "@/lib/pdf-helper";
 
 const COMMON_DEBIT_ACCOUNTS = [
   "仮払金",
@@ -301,10 +303,133 @@ export default function Home() {
 
   const analyzeSingleFile = async (item: ReceiptFileItem) => {
     setCurrentFiles((prev) =>
-      prev.map((i) => (i.id === item.id ? { ...i, status: "analyzing" } : i))
+      prev.map((i) =>
+        i.id === item.id
+          ? {
+              ...i,
+              status: "analyzing",
+              progressMessage: "解析を開始中...",
+              errorMessage: undefined,
+            }
+          : i
+      )
     );
 
     try {
+      // 通帳モードかつ PDF の場合は、ブラウザ側で高解像度画像にページ分割して1ページずつ解析
+      if (appMode === "bankbook" && item.file.type === "application/pdf") {
+        setCurrentFiles((prev) =>
+          prev.map((i) =>
+            i.id === item.id
+              ? { ...i, progressMessage: "PDFをページ画像へ展開中..." }
+              : i
+          )
+        );
+
+        const pageImages = await convertPdfToHighResImages(item.file);
+        const totalPages = pageImages.length;
+
+        const allIntegratedItems: ReceiptAnalysisResult[] = [];
+        const allPageDetails: PageDetail[] = [];
+        let totalDetected = 0;
+        let lastValidDate = "要確認";
+
+        for (let idx = 0; idx < totalPages; idx++) {
+          const pImg = pageImages[idx];
+          const pageNum = pImg.pageNumber;
+
+          setCurrentFiles((prev) =>
+            prev.map((i) =>
+              i.id === item.id
+                ? {
+                    ...i,
+                    status: "analyzing",
+                    progressMessage: `${pageNum}/${totalPages} ページ目を解析中...`,
+                  }
+                : i
+            )
+          );
+
+          const formData = new FormData();
+          formData.append("file", pImg.blob, pImg.fileName);
+
+          const startTime = performance.now();
+          const res = await fetch("/api/analyze-bankbook", {
+            method: "POST",
+            body: formData,
+          });
+          const duration = ((performance.now() - startTime) / 1000).toFixed(2);
+          console.log(
+            `[Bankbook Client Timing] Page ${pageNum}/${totalPages} (${pImg.fileName}) completed in ${duration}s`
+          );
+
+          const contentType = res.headers.get("content-type") || "";
+          let json: AnalyzeApiResponse;
+          if (contentType.includes("application/json")) {
+            json = await res.json();
+          } else {
+            const textError = await res.text();
+            const cleanText = textError.replace(/<[^>]*>?/gm, "").trim();
+            throw new Error(
+              cleanText || `サーバーエラーが発生しました (HTTP ${res.status})`
+            );
+          }
+
+          if (!res.ok || !json.success || !json.data) {
+            throw new Error(
+              json.error ||
+                `Page ${pageNum} の解析に失敗しました (HTTP ${res.status})`
+            );
+          }
+
+          const items = json.data;
+          totalDetected += json.detectedCount || items.length;
+
+          // ページを跨ぐ日付補完とページ番号付与
+          items.forEach((entry) => {
+            entry.pageNumber = pageNum;
+            if (!entry.date || entry.date === "要確認") {
+              if (lastValidDate !== "要確認") {
+                entry.date = lastValidDate;
+              }
+            } else {
+              lastValidDate = entry.date;
+            }
+            allIntegratedItems.push(entry);
+          });
+
+          allPageDetails.push({
+            pageNumber: pageNum,
+            detectedCount: items.length,
+            items,
+          });
+        }
+
+        setInitialBackup((prev) => ({
+          ...prev,
+          [item.id]: JSON.parse(JSON.stringify(allIntegratedItems)),
+        }));
+        setSelectedPageMap((prev) => ({ ...prev, [item.id]: 1 }));
+
+        setCurrentFiles((prev) =>
+          prev.map((i) =>
+            i.id === item.id
+              ? {
+                  ...i,
+                  status: "completed",
+                  results: allIntegratedItems,
+                  detectedCount: totalDetected,
+                  pages: allPageDetails,
+                  progressMessage: undefined,
+                  errorMessage: undefined,
+                }
+              : i
+          )
+        );
+        return;
+      }
+
+      // 単一画像ファイル（領収書または通帳単枚画像）の場合の処理
       const formData = new FormData();
       formData.append("file", item.file);
 
@@ -353,6 +478,7 @@ export default function Home() {
                 results,
                 detectedCount,
                 pages,
+                progressMessage: undefined,
                 errorMessage: undefined,
               }
             : i
@@ -364,7 +490,12 @@ export default function Home() {
       setCurrentFiles((prev) =>
         prev.map((i) =>
           i.id === item.id
-            ? { ...i, status: "error", errorMessage: msg }
+            ? {
+                ...i,
+                status: "error",
+                errorMessage: msg,
+                progressMessage: undefined,
+              }
             : i
         )
       );
@@ -972,7 +1103,7 @@ export default function Home() {
                           )}
                           {item.status === "analyzing" && (
                             <span className="text-[9px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-bold border border-blue-200 animate-pulse">
-                              解析中...
+                              {item.progressMessage || "解析中..."}
                             </span>
                           )}
                           {item.status === "completed" && (

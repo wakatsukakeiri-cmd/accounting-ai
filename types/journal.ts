@@ -61,6 +61,7 @@ export interface ReceiptFileItem {
   previewUrl: string;
   status: ReceiptStatus;
   errorMessage?: string;
+  progressMessage?: string; // 通帳PDFページ単位解析中の進捗表示用
   results?: ReceiptAnalysisResult[];
   detectedCount?: number; // 通帳全ページから認識した明細行総数
   pages?: PageDetail[]; // ページ別詳細
