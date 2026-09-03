@@ -734,25 +734,20 @@ export default function Home() {
       : currentFiles[0];
 
   return (
-    <main className="min-h-screen bg-slate-900 text-slate-100 p-3 md:p-6 font-sans">
-      <div className="mx-auto max-w-[1600px] space-y-4">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased selection:bg-blue-500 selection:text-white">
+      <div className="mx-auto max-w-[1800px] px-4 py-4 space-y-4">
         {/* Header */}
-        <header className="border-b border-slate-800 pb-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+        <header className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur-md">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-400 border border-blue-500/20 mb-2">
-                <span>AI Powered</span>
-                <span>•</span>
-                <span>Gemini 3.6 Flash</span>
-                <span>•</span>
-                <span>Split View ＆ 横一列データテーブル</span>
-                <span>•</span>
+              <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-blue-700 shadow-sm mb-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
                 <span>弥生会計26対応</span>
               </div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-white md:text-3xl">
+              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">
                 AI 会計仕訳作成アシスタント
               </h1>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-500 font-medium">
                 左側で元画像/PDFを対照確認しながら、右側の横一列データテーブルで高速チェック・仕訳編集。
               </p>
             </div>
@@ -761,15 +756,15 @@ export default function Home() {
             <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={() => setShowHistoryModal(true)}
-                className="flex items-center gap-2 rounded-xl bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-200 border border-slate-700 hover:bg-slate-700 hover:text-white transition-all shadow-md"
+                className="flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-xs font-bold text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm"
               >
                 <span>📜 解析履歴</span>
-                <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-bold text-blue-300 border border-blue-500/40">
+                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 border border-blue-200">
                   {historyList.length}件
                 </span>
               </button>
 
-              <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800">
+              <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200">
                 <button
                   onClick={() => {
                     setAppMode("receipt");
@@ -779,8 +774,8 @@ export default function Home() {
                   }}
                   className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
                     appMode === "receipt"
-                      ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
-                      : "text-slate-400 hover:text-white hover:bg-slate-900"
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
                   }`}
                 >
                   <span>📄 領収書モード</span>
@@ -795,8 +790,8 @@ export default function Home() {
                   }}
                   className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
                     appMode === "bankbook"
-                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30"
-                      : "text-slate-400 hover:text-white hover:bg-slate-900"
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
                   }`}
                 >
                   <span>🏦 通帳モード (画像/複数PDF)</span>
@@ -808,9 +803,9 @@ export default function Home() {
 
         {/* Global Error Banner */}
         {globalError && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-300 text-xs flex items-start gap-3 shadow-lg">
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800 text-xs flex items-start gap-3 shadow-sm">
             <svg
-              className="h-5 w-5 text-red-400 shrink-0 mt-0.5"
+              className="h-5 w-5 text-rose-600 shrink-0 mt-0.5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -823,7 +818,7 @@ export default function Home() {
               />
             </svg>
             <div>
-              <h3 className="font-bold text-red-200 mb-0.5">エラーが発生しました</h3>
+              <h3 className="font-bold text-rose-900 mb-0.5">エラーが発生しました</h3>
               <p>{globalError}</p>
             </div>
           </div>
@@ -834,11 +829,11 @@ export default function Home() {
           {/* Left Column: 元画像・PDFプレビュー & ファイル管理 (lg:col-span-4 xl:col-span-3) */}
           <section className="lg:col-span-4 xl:col-span-3 space-y-4">
             {/* アップロードコントロールエリア */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-800/50 p-4 backdrop-blur-sm shadow-xl space-y-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/50 space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                   <svg
-                    className="w-4 h-4 text-blue-400"
+                    className="w-4 h-4 text-blue-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -868,7 +863,7 @@ export default function Home() {
               <div
                 onDragOver={onDragOver}
                 onDrop={onDrop}
-                className="group relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-700 bg-slate-900/60 p-4 text-center transition-all hover:border-blue-500 hover:bg-slate-900/80"
+                className="group relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/80 p-4 text-center transition-all hover:border-blue-500 hover:bg-blue-50/30"
               >
                 <input
                   type="file"
@@ -883,7 +878,7 @@ export default function Home() {
                 />
 
                 <div className="space-y-1">
-                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/10 text-blue-400 group-hover:scale-110 transition-transform">
+                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600 group-hover:scale-110 transition-transform border border-blue-100">
                     <svg
                       className="h-5 w-5"
                       fill="none"
@@ -898,7 +893,7 @@ export default function Home() {
                       />
                     </svg>
                   </div>
-                  <div className="text-xs font-medium text-slate-300">
+                  <div className="text-xs font-bold text-slate-700">
                     {appMode === "receipt"
                       ? "領収書画像をドラッグ＆ドロップ"
                       : "通帳画像・PDF(全ページ)をドラッグ＆ドロップ"}
@@ -921,13 +916,13 @@ export default function Home() {
                         onClick={() => setActiveFileTab(item.id)}
                         className={`flex items-center justify-between rounded-xl border p-2 cursor-pointer transition-all ${
                           activeFileTab === item.id
-                            ? "border-blue-500 bg-blue-500/10 shadow-sm"
-                            : "border-slate-700/80 bg-slate-900/80 hover:border-slate-600"
+                            ? "border-blue-500 bg-blue-50/80 shadow-sm"
+                            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                         }`}
                       >
                         <div className="flex items-center gap-2.5 overflow-hidden">
                           {item.file.type === "application/pdf" ? (
-                            <div className="h-8 w-8 rounded border border-red-500/30 bg-red-500/10 flex items-center justify-center text-red-400 shrink-0 font-bold text-[10px]">
+                            <div className="h-8 w-8 rounded border border-red-200 bg-red-50 flex items-center justify-center text-red-600 shrink-0 font-bold text-[10px]">
                               PDF
                             </div>
                           ) : item.previewUrl ? (
@@ -935,24 +930,24 @@ export default function Home() {
                             <img
                               src={item.previewUrl}
                               alt={item.fileName}
-                              className="h-8 w-8 object-cover rounded border border-slate-700 shrink-0 bg-black/40"
+                              className="h-8 w-8 object-cover rounded border border-slate-200 shrink-0 bg-slate-100"
                             />
                           ) : (
-                            <div className="h-8 w-8 rounded border border-blue-500/30 bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0 font-bold text-[10px]">
+                            <div className="h-8 w-8 rounded border border-blue-200 bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 font-bold text-[10px]">
                               画像
                             </div>
                           )}
 
                           <div className="min-w-0">
-                            <p className="text-xs font-semibold text-slate-200 truncate">
+                            <p className="text-xs font-bold text-slate-800 truncate">
                               {item.fileName}
                             </p>
-                            <p className="text-[10px] text-slate-400">
+                            <p className="text-[10px] text-slate-500">
                               {(item.file.size / 1024).toFixed(1)} KB
                             </p>
                             {item.status === "error" && item.errorMessage && (
                               <p
-                                className="text-[10px] font-mono text-red-400 mt-0.5 truncate max-w-[220px]"
+                                className="text-[10px] font-mono text-rose-600 mt-0.5 truncate max-w-[220px]"
                                 title={item.errorMessage}
                               >
                                 {item.errorMessage}
@@ -963,22 +958,22 @@ export default function Home() {
 
                         <div className="flex items-center gap-1.5 shrink-0">
                           {item.status === "idle" && (
-                            <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-medium border border-slate-700">
+                            <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium border border-slate-200">
                               未解析
                             </span>
                           )}
                           {item.status === "analyzing" && (
-                            <span className="text-[9px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded font-bold border border-blue-500/40 animate-pulse">
+                            <span className="text-[9px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-bold border border-blue-200 animate-pulse">
                               解析中...
                             </span>
                           )}
                           {item.status === "completed" && (
-                            <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold border border-emerald-500/40">
+                            <span className="text-[9px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold border border-emerald-200">
                               ✓ {item.results?.length || 0}件
                             </span>
                           )}
                           {item.status === "error" && (
-                            <span className="text-[9px] bg-red-500/20 text-red-300 px-1.5 py-0.5 rounded font-bold border border-red-500/40">
+                            <span className="text-[9px] bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded font-bold border border-rose-200">
                               ⚠️ エラー
                             </span>
                           )}
@@ -989,7 +984,7 @@ export default function Home() {
                               handleRemoveFile(item.id);
                             }}
                             disabled={isBatchProcessing}
-                            className="text-slate-500 hover:text-red-400 p-0.5 transition-colors disabled:opacity-30"
+                            className="text-slate-400 hover:text-rose-600 p-0.5 transition-colors disabled:opacity-30"
                           >
                             ✕
                           </button>
@@ -1008,7 +1003,7 @@ export default function Home() {
                   isBatchProcessing ||
                   currentFiles.every((i) => i.status === "completed")
                 }
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 font-bold text-xs text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-500 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 font-bold text-xs text-white shadow-md shadow-blue-500/20 transition-all hover:from-blue-700 hover:to-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
               >
                 {isBatchProcessing ? (
                   <span>全ページ解析中 ({summary.completedFiles}/{summary.totalFiles})...</span>
@@ -1024,18 +1019,18 @@ export default function Home() {
 
             {/* 左カラム下部: 選択中ファイルの元画像プレビュー ＆ 通帳ページ照合 */}
             {activeFileItem && activeFileItem.status === "completed" && (
-              <div className="rounded-2xl border border-slate-800 bg-slate-800/50 p-4 backdrop-blur-sm shadow-xl space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
-                  <h3 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/50 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <span>🔍 元画像プレビュー:</span>
-                    <span className="text-blue-400 truncate max-w-[200px]">
+                    <span className="text-blue-700 truncate max-w-[200px]">
                       {activeFileItem.fileName}
                     </span>
                   </h3>
 
                   <button
                     onClick={() => handleResetFileResults(activeFileItem.id)}
-                    className="text-[10px] text-slate-400 hover:text-white border border-slate-700 bg-slate-800 px-2 py-0.5 rounded"
+                    className="text-[10px] text-slate-600 hover:text-slate-900 border border-slate-300 bg-slate-50 hover:bg-slate-100 px-2 py-0.5 rounded font-medium"
                   >
                     初期結果にリセット
                   </button>
@@ -1045,7 +1040,7 @@ export default function Home() {
                 {appMode === "bankbook" && activeFileItem.pages && activeFileItem.pages.length > 0 && (
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
-                      <span className="font-bold text-blue-300">
+                      <span className="font-bold text-blue-800">
                         通帳ページ: {selectedPageMap[activeFileItem.id] === "all" ? "全ページ" : `${selectedPageMap[activeFileItem.id] || 1} / ${activeFileItem.pages.length} ページ`}
                       </span>
 
@@ -1063,8 +1058,8 @@ export default function Home() {
                               }
                               className={`px-2 py-0.5 text-[10px] font-bold rounded border ${
                                 isCur
-                                  ? "bg-blue-600 border-blue-500 text-white"
-                                  : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800"
+                                  ? "bg-blue-600 border-blue-600 text-white"
+                                  : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
                               }`}
                             >
                               P.{p.pageNumber}
@@ -1077,12 +1072,12 @@ export default function Home() {
                 )}
 
                 {/* プレビュー表示キャンバス/画像 */}
-                <div className="bg-black/70 rounded-xl p-2 border border-slate-800 flex items-center justify-center min-h-[220px] max-h-[360px] overflow-hidden">
+                <div className="bg-slate-100 rounded-xl p-2 border border-slate-200 flex items-center justify-center min-h-[220px] max-h-[360px] overflow-hidden">
                   {activeFileItem.file.type === "application/pdf" && activeFileItem.previewUrl ? (
                     <iframe
                       src={`${activeFileItem.previewUrl}#page=${selectedPageMap[activeFileItem.id] === "all" ? 1 : selectedPageMap[activeFileItem.id] || 1}&toolbar=0&navpanes=0`}
                       title={`元画像プレビュー ${activeFileItem.fileName}`}
-                      className="w-full h-[320px] rounded border-0 bg-white"
+                      className="w-full h-[320px] rounded border border-slate-200 bg-white"
                     />
                   ) : activeFileItem.previewUrl ? (
                     /* eslint-disable-next-html-element-for-img */
@@ -1092,7 +1087,7 @@ export default function Home() {
                       className="max-h-[320px] w-full object-contain rounded"
                     />
                   ) : (
-                    <div className="text-xs text-slate-400 text-center p-6">
+                    <div className="text-xs text-slate-500 text-center p-6 font-medium">
                       📜 履歴復元データ (元画像プレビューなし)
                     </div>
                   )}
@@ -1100,10 +1095,10 @@ export default function Home() {
 
                 {/* 件数照合ステータス */}
                 {appMode === "bankbook" && (
-                  <div className="text-[11px] font-mono text-slate-300 bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
+                  <div className="text-[11px] font-mono text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex items-center justify-between">
                     <span>認識明細: <strong>{activeFileItem.detectedCount ?? activeFileItem.results?.length}</strong> 件</span>
                     <span>生成仕訳: <strong>{activeFileItem.results?.length}</strong> 件</span>
-                    <span className="text-emerald-400 font-bold">✅ 照合OK</span>
+                    <span className="text-emerald-700 font-bold">✅ 照合OK</span>
                   </div>
                 )}
               </div>
@@ -1113,10 +1108,10 @@ export default function Home() {
           {/* Right Column: 仕訳確認・編集・一括操作 & 横一列データテーブル (lg:col-span-8 xl:col-span-9) */}
           <section className="lg:col-span-8 xl:col-span-9 space-y-4">
             {summary.completedFiles === 0 && !isBatchProcessing && (
-              <div className="flex h-full min-h-[420px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center">
-                <div className="rounded-full bg-slate-800 p-4 text-slate-500 mb-3">
+              <div className="flex h-full min-h-[420px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
+                <div className="rounded-full bg-slate-100 p-4 text-slate-400 mb-3 border border-slate-200">
                   <svg
-                    className="h-8 w-8"
+                    className="h-8 w-8 text-slate-500"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -1129,10 +1124,10 @@ export default function Home() {
                     />
                   </svg>
                 </div>
-                <h3 className="text-base font-semibold text-slate-300">
+                <h3 className="text-base font-bold text-slate-800">
                   仕訳データが未作成です
                 </h3>
-                <p className="mt-1 text-xs text-slate-500 max-w-xs">
+                <p className="mt-1 text-xs text-slate-500 max-w-xs font-medium">
                   {appMode === "receipt"
                     ? "左側のエリアで領収書画像を選択し、「AIで仕訳を作成」ボタンを押してください。"
                     : "左側のエリアで通帳画像またはPDFを選択し、「通帳全ページをAI解析して仕訳作成」ボタンを押してください。"}
@@ -1141,15 +1136,15 @@ export default function Home() {
             )}
 
             {summary.completedFiles > 0 && (
-              <div className="rounded-2xl border border-slate-800 bg-slate-800/50 p-4 md:p-5 backdrop-blur-sm shadow-xl space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm shadow-slate-200/50 space-y-4">
                 {/* ファイル切替タブバー */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-slate-700/80">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-slate-200">
                   <button
                     onClick={() => setActiveFileTab("all")}
                     className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all shrink-0 ${
                       activeFileTab === "all"
-                        ? "bg-blue-600 border-blue-500 text-white shadow-md"
-                        : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800"
+                        ? "bg-blue-600 border-blue-600 text-white shadow-sm"
+                        : "bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200"
                     }`}
                   >
                     🌐 全ファイル統合 ({summary.totalEntries}件)
@@ -1165,8 +1160,8 @@ export default function Home() {
                           onClick={() => setActiveFileTab(f.id)}
                           className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all shrink-0 flex items-center gap-1.5 ${
                             isAct
-                              ? "bg-indigo-600 border-indigo-500 text-white shadow-md"
-                              : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800"
+                              ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
+                              : "bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200"
                           }`}
                         >
                           <span>📁 {f.fileName}</span>
@@ -1180,27 +1175,27 @@ export default function Home() {
 
                 {/* AI要確認アラートバッジ */}
                 {summary.uncertainList.length > 0 && (
-                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-200 flex items-center justify-between">
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900 flex items-center justify-between shadow-sm">
                     <div className="flex items-center gap-2">
                       <span className="text-base">⚠️</span>
-                      <span>
+                      <span className="font-medium">
                         要確認項目が <strong>{summary.uncertainList.length} 件</strong> あります。修正して確定してください。
                       </span>
                     </div>
-                    <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-bold border border-amber-500/40">
+                    <span className="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold border border-amber-300">
                       要確認
                     </span>
                   </div>
                 )}
 
                 {/* ⚡ 一括操作コントロールパネル */}
-                <div className="rounded-xl border border-slate-700 bg-slate-900/90 p-3.5 space-y-3 shadow-lg">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-3 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                         <span>⚡ 一括操作</span>
                         {selectedKeys.size > 0 ? (
-                          <span className="rounded-full bg-blue-500/20 px-2.5 py-0.5 text-xs font-bold text-blue-300 border border-blue-500/40">
+                          <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-700 border border-blue-200">
                             {selectedKeys.size} 件選択中
                           </span>
                         ) : (
@@ -1214,14 +1209,14 @@ export default function Home() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={handleSelectAll}
-                        className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-700 transition-colors"
+                        className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors shadow-sm"
                       >
                         ☑ 全て選択
                       </button>
                       <button
                         onClick={handleDeselectAll}
                         disabled={selectedKeys.size === 0}
-                        className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-400 hover:bg-slate-700 disabled:opacity-40 transition-colors"
+                        className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100 disabled:opacity-40 transition-colors shadow-sm"
                       >
                         ☐ 全て解除
                       </button>
@@ -1231,15 +1226,15 @@ export default function Home() {
                   {/* 一括変更・削除フォーム群 */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                     {/* 科目変更 */}
-                    <div className="rounded-lg bg-slate-950/80 p-2.5 border border-slate-800 space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-300 block">
+                    <div className="rounded-lg bg-white p-2.5 border border-slate-200 space-y-1.5 shadow-sm">
+                      <label className="text-[10px] font-bold text-slate-700 block">
                         勘定科目の一括変更
                       </label>
                       <div className="flex gap-1">
                         <select
                           value={bulkAccountSide}
                           onChange={(e) => setBulkAccountSide(e.target.value as "debit" | "credit")}
-                          className="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-white focus:outline-none"
+                          className="rounded border border-slate-300 bg-slate-50 px-1.5 py-0.5 text-xs text-slate-800 focus:outline-none"
                         >
                           <option value="debit">借方</option>
                           <option value="credit">貸方</option>
@@ -1250,7 +1245,7 @@ export default function Home() {
                           value={bulkAccountValue}
                           onChange={(e) => setBulkAccountValue(e.target.value)}
                           placeholder="新科目名"
-                          className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-xs text-white focus:outline-none"
+                          className="w-full rounded border border-slate-300 bg-slate-50 px-2 py-0.5 text-xs text-slate-800 focus:outline-none"
                         />
                         <datalist id="bulk-account-suggestions">
                           {Array.from(new Set([...COMMON_DEBIT_ACCOUNTS, ...COMMON_CREDIT_ACCOUNTS])).map((cat) => (
@@ -1261,22 +1256,22 @@ export default function Home() {
                       <button
                         onClick={handleApplyBulkAccountChange}
                         disabled={selectedKeys.size === 0 || !bulkAccountValue.trim()}
-                        className="w-full rounded bg-blue-600 px-2 py-1 text-xs font-bold text-white hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        className="w-full rounded bg-blue-600 px-2 py-1 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                       >
                         科目一括変更
                       </button>
                     </div>
 
                     {/* 税区分変更 */}
-                    <div className="rounded-lg bg-slate-950/80 p-2.5 border border-slate-800 space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-300 block">
+                    <div className="rounded-lg bg-white p-2.5 border border-slate-200 space-y-1.5 shadow-sm">
+                      <label className="text-[10px] font-bold text-slate-700 block">
                         税区分の一括変更
                       </label>
                       <div className="flex gap-1">
                         <select
                           value={bulkTaxSide}
                           onChange={(e) => setBulkTaxSide(e.target.value as "debit" | "credit")}
-                          className="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-white focus:outline-none"
+                          className="rounded border border-slate-300 bg-slate-50 px-1.5 py-0.5 text-xs text-slate-800 focus:outline-none"
                         >
                           <option value="debit">借方</option>
                           <option value="credit">貸方</option>
@@ -1284,7 +1279,7 @@ export default function Home() {
                         <select
                           value={bulkTaxValue}
                           onChange={(e) => setBulkTaxValue(e.target.value)}
-                          className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-xs text-white focus:outline-none"
+                          className="w-full rounded border border-slate-300 bg-slate-50 px-2 py-0.5 text-xs text-slate-800 focus:outline-none"
                         >
                           {TAX_TYPES.map((t) => (
                             <option key={t} value={t}>
@@ -1296,26 +1291,26 @@ export default function Home() {
                       <button
                         onClick={handleApplyBulkTaxChange}
                         disabled={selectedKeys.size === 0}
-                        className="w-full rounded bg-indigo-600 px-2 py-1 text-xs font-bold text-white hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        className="w-full rounded bg-indigo-600 px-2 py-1 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                       >
                         税区分一括変更
                       </button>
                     </div>
 
                     {/* 一括削除 */}
-                    <div className="rounded-lg bg-slate-950/80 p-2.5 border border-slate-800 space-y-1.5 flex flex-col justify-between">
+                    <div className="rounded-lg bg-white p-2.5 border border-slate-200 space-y-1.5 flex flex-col justify-between shadow-sm">
                       <div>
-                        <label className="text-[10px] font-bold text-slate-300 block mb-0.5">
+                        <label className="text-[10px] font-bold text-slate-700 block mb-0.5">
                           選択仕訳の一括削除
                         </label>
-                        <p className="text-[10px] text-slate-400">
+                        <p className="text-[10px] text-slate-500 font-medium">
                           {selectedKeys.size} 件を選択中
                         </p>
                       </div>
                       <button
                         onClick={() => setShowDeleteConfirmModal(true)}
                         disabled={selectedKeys.size === 0}
-                        className="w-full rounded bg-rose-600 px-2 py-1 text-xs font-bold text-white hover:bg-rose-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        className="w-full rounded bg-rose-600 px-2 py-1 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                       >
                         選択仕訳を一括削除
                       </button>
@@ -1324,9 +1319,9 @@ export default function Home() {
                 </div>
 
                 {/* 横一列データテーブル (スプレッドシート型仕訳一覧) */}
-                <div className="overflow-x-auto rounded-xl border border-slate-700 bg-slate-950/80 max-h-[600px] overflow-y-auto shadow-inner">
-                  <table className="w-full text-left text-xs text-slate-200 border-collapse min-w-[850px]">
-                    <thead className="sticky top-0 z-10 bg-slate-800 border-b border-slate-700 text-slate-300 font-bold shadow-md">
+                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white max-h-[600px] overflow-y-auto shadow-sm">
+                  <table className="w-full text-left text-xs text-slate-800 border-collapse min-w-[850px]">
+                    <thead className="sticky top-0 z-10 bg-slate-100 border-b border-slate-200 text-slate-700 font-bold shadow-sm">
                       <tr>
                         <th className="px-2 py-2 w-10 text-center">☑</th>
                         <th className="px-2 py-2 w-28">元ファイル</th>
@@ -1341,7 +1336,7 @@ export default function Home() {
                         <th className="px-2 py-2 w-12 text-center">操作</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800/80 font-mono">
+                    <tbody className="divide-y divide-slate-200 font-mono">
                       {currentFiles
                         .filter(
                           (fileItem) =>
@@ -1357,8 +1352,8 @@ export default function Home() {
                             return (
                               <tr
                                 key={entryKey}
-                                className={`transition-colors hover:bg-slate-900/90 ${
-                                  isSelected ? "bg-blue-500/15" : ""
+                                className={`transition-colors hover:bg-slate-50/80 ${
+                                  isSelected ? "bg-blue-50/80" : ""
                                 }`}
                               >
                                 {/* チェックボックス */}
@@ -1367,17 +1362,17 @@ export default function Home() {
                                     type="checkbox"
                                     checked={isSelected}
                                     onChange={() => handleToggleSelectKey(entryKey)}
-                                    className="h-3.5 w-3.5 rounded border-slate-700 bg-slate-900 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                    className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                                   />
                                 </td>
 
                                 {/* 元ファイル / ページ */}
                                 <td className="px-2 py-1.5 truncate max-w-[120px]" title={fileItem.fileName}>
-                                  <span className="text-[10px] text-slate-300 font-sans block truncate">
+                                  <span className="text-[10px] text-slate-700 font-sans block truncate font-medium">
                                     📁 {fileItem.fileName}
                                   </span>
                                   {entry.pageNumber && (
-                                    <span className="text-[9px] bg-slate-800 text-blue-300 px-1 py-0.2 rounded border border-blue-500/30">
+                                    <span className="text-[9px] bg-blue-50 text-blue-700 px-1 py-0.2 rounded border border-blue-200 font-bold">
                                       P.{entry.pageNumber}
                                     </span>
                                   )}
@@ -1397,10 +1392,10 @@ export default function Home() {
                                       )
                                     }
                                     placeholder="YYYY-MM-DD"
-                                    className={`w-full rounded border px-2 py-0.5 text-xs text-white focus:outline-none ${
+                                    className={`w-full rounded border px-2 py-0.5 text-xs text-slate-900 focus:outline-none ${
                                       isUncertainInEntry(entry, "date")
-                                        ? "border-amber-500 bg-amber-500/20"
-                                        : "border-slate-700 bg-slate-950 focus:border-blue-500"
+                                        ? "border-amber-400 bg-amber-50 text-amber-900 font-medium"
+                                        : "border-slate-300 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
                                     }`}
                                   />
                                 </td>
@@ -1419,10 +1414,10 @@ export default function Home() {
                                       )
                                     }
                                     placeholder="相手先"
-                                    className={`w-full rounded border px-1.5 py-0.5 text-xs text-white focus:outline-none ${
+                                    className={`w-full rounded border px-1.5 py-0.5 text-xs text-slate-900 focus:outline-none ${
                                       isUncertainInEntry(entry, "payee")
-                                        ? "border-amber-500 bg-amber-500/20"
-                                        : "border-slate-700 bg-slate-950 focus:border-blue-500"
+                                        ? "border-amber-400 bg-amber-50 text-amber-900 font-medium"
+                                        : "border-slate-300 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
                                     }`}
                                   />
                                 </td>
@@ -1441,10 +1436,10 @@ export default function Home() {
                                         e.target.value
                                       )
                                     }
-                                    className={`w-full rounded border px-1.5 py-0.5 text-xs text-white focus:outline-none ${
+                                    className={`w-full rounded border px-1.5 py-0.5 text-xs text-slate-900 focus:outline-none ${
                                       isUncertainInEntry(entry, "debitAccount")
-                                        ? "border-amber-500 bg-amber-500/20"
-                                        : "border-slate-700 bg-slate-950 focus:border-blue-500"
+                                        ? "border-amber-400 bg-amber-50 text-amber-900 font-medium"
+                                        : "border-slate-300 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
                                     }`}
                                   />
                                   <datalist id={`debit-accounts-${fileItem.id}-${resIdx}`}>
@@ -1466,7 +1461,7 @@ export default function Home() {
                                         e.target.value
                                       )
                                     }
-                                    className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-0.5 text-xs text-white focus:outline-none"
+                                    className="w-full rounded border border-slate-300 bg-white px-1 py-0.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
                                   >
                                     <option value="要確認">要確認</option>
                                     {TAX_TYPES.map((t) => (
@@ -1491,10 +1486,10 @@ export default function Home() {
                                         e.target.value
                                       )
                                     }
-                                    className={`w-full rounded border px-1.5 py-0.5 text-xs text-white focus:outline-none ${
+                                    className={`w-full rounded border px-1.5 py-0.5 text-xs text-slate-900 focus:outline-none ${
                                       isUncertainInEntry(entry, "creditAccount")
-                                        ? "border-amber-500 bg-amber-500/20"
-                                        : "border-slate-700 bg-slate-950 focus:border-blue-500"
+                                        ? "border-amber-400 bg-amber-50 text-amber-900 font-medium"
+                                        : "border-slate-300 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
                                     }`}
                                   />
                                   <datalist id={`credit-accounts-${fileItem.id}-${resIdx}`}>
@@ -1516,7 +1511,7 @@ export default function Home() {
                                         e.target.value
                                       )
                                     }
-                                    className="w-full rounded border border-slate-700 bg-slate-950 px-1 py-0.5 text-xs text-white focus:outline-none"
+                                    className="w-full rounded border border-slate-300 bg-white px-1 py-0.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
                                   >
                                     <option value="要確認">要確認</option>
                                     {TAX_TYPES.map((t) => (
@@ -1528,7 +1523,7 @@ export default function Home() {
                                 </td>
 
                                 {/* 金額 */}
-                                <td className="px-2 py-1.5 text-right font-bold text-emerald-400">
+                                <td className="px-2 py-1.5 text-right font-bold text-emerald-700">
                                   <input
                                     type="text"
                                     inputMode="numeric"
@@ -1541,10 +1536,10 @@ export default function Home() {
                                         e.target.value
                                       )
                                     }
-                                    className={`w-full text-right rounded border px-1.5 py-0.5 text-xs font-bold text-white focus:outline-none ${
+                                    className={`w-full text-right rounded border px-1.5 py-0.5 text-xs font-bold text-slate-900 focus:outline-none ${
                                       isUncertainInEntry(entry, "amount")
-                                        ? "border-amber-500 bg-amber-500/20"
-                                        : "border-slate-700 bg-slate-950 focus:border-blue-500"
+                                        ? "border-amber-400 bg-amber-50 text-amber-900"
+                                        : "border-slate-300 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
                                     }`}
                                   />
                                 </td>
@@ -1563,7 +1558,7 @@ export default function Home() {
                                       )
                                     }
                                     placeholder="摘要"
-                                    className="w-full rounded border border-slate-700 bg-slate-950 px-1.5 py-0.5 text-xs text-white focus:outline-none"
+                                    className="w-full rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
                                   />
                                 </td>
 
@@ -1581,7 +1576,7 @@ export default function Home() {
                                         })
                                       );
                                     }}
-                                    className="rounded p-1 text-rose-500 hover:text-red-300 hover:bg-rose-500/20 transition-all inline-flex items-center justify-center"
+                                    className="rounded p-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-colors inline-flex items-center justify-center"
                                     title="仕訳を削除"
                                   >
                                     <svg
@@ -1608,17 +1603,17 @@ export default function Home() {
                 </div>
 
                 {/* 貸借集計・ダウンロードエリア */}
-                <div className="rounded-xl border border-slate-700 bg-slate-900/90 p-3 space-y-3">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-3 shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
                       貸借集計チェック
                     </h3>
                     {summary.isAllBalanced ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-400 border border-emerald-500/30">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
                         ✓ 貸借一致 (借方: ¥{summary.totalDebitSum.toLocaleString()} / 貸方: ¥{summary.totalCreditSum.toLocaleString()})
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-3 py-1 text-xs font-bold text-red-300 border border-red-500/40">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700 border border-rose-200">
                         ⚠️ 貸借不一致 (差額: ¥{Math.abs(summary.totalDebitSum - summary.totalCreditSum).toLocaleString()})
                       </span>
                     )}
@@ -1627,7 +1622,7 @@ export default function Home() {
                   <button
                     onClick={handleDownloadClick}
                     disabled={!summary.canExport}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 font-bold text-xs text-white shadow-lg shadow-emerald-500/20 transition-all hover:from-emerald-500 hover:to-teal-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 font-bold text-xs text-white shadow-md shadow-emerald-500/20 transition-all hover:from-emerald-700 hover:to-teal-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
                   >
                     <span>
                       {summary.isSelectionActive
@@ -1644,26 +1639,26 @@ export default function Home() {
 
       {/* 一括削除確認モーダル */}
       {showDeleteConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-rose-500/40 bg-slate-900 p-6 shadow-2xl space-y-4">
-            <div className="flex items-center gap-3 text-rose-400">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-rose-200 bg-white p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
               <span className="text-2xl">🗑️</span>
-              <h3 className="text-lg font-bold text-white">一括削除の確認</h3>
+              <h3 className="text-lg font-bold text-slate-900">一括削除の確認</h3>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-slate-600 leading-relaxed">
               選択した <strong>{selectedKeys.size} 件</strong> の仕訳エントリーを一覧から削除します。よろしいですか？
             </p>
 
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setShowDeleteConfirmModal(false)}
-                className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 キャンセル
               </button>
               <button
                 onClick={handleApplyBulkDelete}
-                className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-500 transition-colors"
+                className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700 transition-colors shadow-sm"
               >
                 削除する
               </button>
@@ -1674,17 +1669,17 @@ export default function Home() {
 
       {/* 要確認警告モーダル */}
       {showWarningModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-amber-500/40 bg-slate-900 p-6 shadow-2xl space-y-4">
-            <div className="flex items-center gap-3 text-amber-400">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-amber-200 bg-white p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-3 text-amber-600">
               <span className="text-2xl">⚠️</span>
-              <h3 className="text-lg font-bold text-white">要確認項目が残っています</h3>
+              <h3 className="text-lg font-bold text-slate-900">要確認項目が残っています</h3>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-slate-600 leading-relaxed">
               仕訳の中に「要確認」の項目が含まれています。このまま弥生会計26用{appMode === "bankbook" ? "テキスト(.txt)" : "CSV(.csv)"}をダウンロードしますか？
             </p>
 
-            <div className="max-h-40 overflow-y-auto rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-200">
+            <div className="max-h-40 overflow-y-auto rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
               <span className="font-bold block mb-1">要確認項目一覧: </span>
               {summary.uncertainList.map((itemStr, i) => (
                 <div key={i} className="truncate">
@@ -1696,7 +1691,7 @@ export default function Home() {
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setShowWarningModal(false)}
-                className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 キャンセルして修正
               </button>
@@ -1705,7 +1700,7 @@ export default function Home() {
                   setShowWarningModal(false);
                   executeDownloadYayoiCsv();
                 }}
-                className="rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 transition-colors"
+                className="rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-900 hover:bg-amber-400 transition-colors shadow-sm"
               >
                 了解してそのままダウンロード
               </button>
@@ -1716,29 +1711,29 @@ export default function Home() {
 
       {/* 解析履歴モーダル */}
       {showHistoryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center gap-2">
                 <span className="text-xl">📜</span>
-                <h3 className="text-base font-bold text-white">
+                <h3 className="text-base font-bold text-slate-900">
                   解析・作成履歴 ({historyList.length} 件)
                 </h3>
               </div>
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-700 p-1 font-bold"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500 font-medium">
               ブラウザに自動保存された過去の仕訳解析履歴です。「復元」ボタンを押すと対象の仕訳データを復元できます。
             </p>
 
             {historyList.length === 0 ? (
-              <div className="py-12 text-center text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
+              <div className="py-12 text-center text-xs text-slate-500 border border-dashed border-slate-200 rounded-xl bg-slate-50 font-medium">
                 保存された解析履歴はありません。仕訳を作成すると自動的に保存されます。
               </div>
             ) : (
@@ -1749,26 +1744,26 @@ export default function Home() {
                   return (
                     <div
                       key={record.id}
-                      className="rounded-xl border border-slate-800 bg-slate-950/80 p-4 space-y-2.5 transition-all hover:border-slate-700"
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2.5 transition-all hover:border-blue-300 hover:bg-blue-50/20"
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
                         <div className="flex items-center gap-2">
                           <span
                             className={`text-[10px] px-2 py-0.5 rounded font-bold border ${
                               record.mode === "receipt"
-                                ? "bg-blue-500/20 text-blue-300 border-blue-500/40"
-                                : "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
+                                ? "bg-blue-50 text-blue-700 border-blue-200"
+                                : "bg-indigo-50 text-indigo-700 border-indigo-200"
                             }`}
                           >
                             {record.mode === "receipt" ? "📄 領収書" : "🏦 通帳"}
                           </span>
-                          <span className="text-xs font-mono text-slate-400">
+                          <span className="text-xs font-mono text-slate-500">
                             {dateStr}
                           </span>
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-emerald-400">
+                          <span className="text-xs font-bold text-emerald-700">
                             ¥{record.totalAmount.toLocaleString()} ({record.totalEntries}件)
                           </span>
                         </div>
@@ -1779,7 +1774,7 @@ export default function Home() {
                           {record.fileNames.map((fn, idx) => (
                             <span
                               key={idx}
-                              className="text-[10px] bg-slate-900 text-slate-300 px-2 py-0.5 rounded border border-slate-800 truncate max-w-[160px]"
+                              className="text-[10px] bg-white text-slate-700 px-2 py-0.5 rounded border border-slate-200 truncate max-w-[160px] font-medium"
                               title={fn}
                             >
                               📁 {fn}
@@ -1790,13 +1785,13 @@ export default function Home() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleRestoreHistoryRecord(record)}
-                            className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-bold text-white hover:bg-blue-500 transition-colors shadow-md shadow-blue-500/20"
+                            className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-bold text-white hover:bg-blue-700 transition-colors shadow-sm"
                           >
                             仕訳を復元
                           </button>
                           <button
                             onClick={() => handleDeleteHistoryRecord(record.id)}
-                            className="text-[11px] text-slate-500 hover:text-red-400 p-1 transition-colors"
+                            className="text-[11px] text-slate-400 hover:text-rose-600 p-1 transition-colors"
                             title="履歴から削除"
                           >
                             削除
@@ -1809,10 +1804,10 @@ export default function Home() {
               </div>
             )}
 
-            <div className="border-t border-slate-800 pt-3 flex justify-end">
+            <div className="border-t border-slate-200 pt-3 flex justify-end">
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
               >
                 閉じる
               </button>
@@ -1820,6 +1815,6 @@ export default function Home() {
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }
