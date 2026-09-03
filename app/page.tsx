@@ -316,10 +316,21 @@ export default function Home() {
         body: formData,
       });
 
-      const json: AnalyzeApiResponse = await res.json();
+      const contentType = res.headers.get("content-type") || "";
 
-      if (!json.success || !json.data || json.data.length === 0) {
-        throw new Error(json.error || "解析に失敗しました。");
+      let json: AnalyzeApiResponse;
+      if (contentType.includes("application/json")) {
+        json = await res.json();
+      } else {
+        const textError = await res.text();
+        const cleanText = textError.replace(/<[^>]*>?/gm, "").trim();
+        throw new Error(
+          cleanText || `サーバーエラーが発生しました (HTTP ${res.status})`
+        );
+      }
+
+      if (!res.ok || !json.success || !json.data || json.data.length === 0) {
+        throw new Error(json.error || `解析に失敗しました (HTTP ${res.status})`);
       }
 
       const results = json.data;

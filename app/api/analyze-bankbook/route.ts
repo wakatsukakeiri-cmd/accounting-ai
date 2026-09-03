@@ -5,7 +5,15 @@ import { ReceiptAnalysisResult, PageDetail } from "@/types/journal";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
+  const startTime = performance.now();
+  const logTime = (step: string) => {
+    const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+    console.log(`[Bankbook API Timing] [${elapsed}s] ${step}`);
+  };
+
   try {
+    logTime("1. リクエスト受信開始");
+
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey || apiKey === "your_gemini_api_key_here") {
       return NextResponse.json(
@@ -45,6 +53,7 @@ export async function POST(request: Request) {
     // ファイルを Buffer / Base64 に変換
     const arrayBuffer = await file.arrayBuffer();
     const base64Data = Buffer.from(arrayBuffer).toString("base64");
+    logTime(`2. PDF/Base64変換完了 (サイズ: ${(file.size / 1024).toFixed(1)}KB)`);
 
     const ai = new GoogleGenAI({ apiKey });
 
@@ -159,6 +168,7 @@ export async function POST(request: Request) {
       throw lastError;
     }
 
+    logTime("3. Gemini API呼び出し開始 (model: gemini-3.6-flash)");
     const response = await callGeminiWithRetry(() =>
       ai.models.generateContent({
         model: "gemini-3.6-flash",
@@ -244,6 +254,7 @@ export async function POST(request: Request) {
         },
       })
     );
+    logTime("4. Gemini API応答受信完了");
 
     const responseText = response.text || "";
     if (!responseText) {
@@ -256,6 +267,7 @@ export async function POST(request: Request) {
     let parsedPages: PageDetail[] = [];
     try {
       const rawJson = JSON.parse(responseText);
+      logTime("5. レスポンスJSON解析完了");
       if (rawJson && Array.isArray(rawJson.pages)) {
         parsedPages = rawJson.pages;
       } else if (Array.isArray(rawJson)) {
@@ -313,6 +325,7 @@ export async function POST(request: Request) {
       });
     });
 
+    logTime(`6. APIレスポンス返却直前 (抽出結果: ${allIntegratedItems.length}件)`);
     return NextResponse.json({
       success: true,
       data: allIntegratedItems,
@@ -320,6 +333,7 @@ export async function POST(request: Request) {
       pages: parsedPages,
     });
   } catch (err: unknown) {
+    logTime(`❌ エラー発生: ${err instanceof Error ? err.message : String(err)}`);
     console.error("Gemini Bankbook API Error:", err);
     const errorMessage =
       err instanceof Error ? err.message : "通帳の解析中にエラーが発生しました。";
