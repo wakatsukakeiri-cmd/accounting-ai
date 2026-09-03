@@ -370,7 +370,7 @@ export default function Home() {
     setIsBatchProcessing(true);
     setGlobalError(null);
 
-    await runWithConcurrencyLimit(pendingItems, 2, async (item) => {
+    await runWithConcurrencyLimit(pendingItems, 1, async (item) => {
       await analyzeSingleFile(item);
     });
 
@@ -950,6 +950,14 @@ export default function Home() {
                             <p className="text-[10px] text-slate-400">
                               {(item.file.size / 1024).toFixed(1)} KB
                             </p>
+                            {item.status === "error" && item.errorMessage && (
+                              <p
+                                className="text-[10px] font-mono text-red-400 mt-0.5 truncate max-w-[220px]"
+                                title={item.errorMessage}
+                              >
+                                {item.errorMessage}
+                              </p>
+                            )}
                           </div>
                         </div>
 
