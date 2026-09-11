@@ -117,7 +117,7 @@ export async function POST(request: Request) {
           "creditSubAccount": "",
           "creditTaxType": "対象外",
           "creditAmount": "貸方金額(数値)。amountと一致させること",
-          "summary": "摘要 (例: '通帳明細 08/15 振込 BZ2 タカギ ユキオ')",
+          "summary": "摘要 (例: '振込 BZ2 タカギ ユキオ')。※重要: 摘要の中に取引日付 (例: '08/15', '2026/08/25') を含めないでください。",
           "uncertainFields": ["要確認となった項目のキー名配列"],
           "transactionType": "出金 または 入金",
           "balance": "解読できた場合の残高(数値または'要確認')",

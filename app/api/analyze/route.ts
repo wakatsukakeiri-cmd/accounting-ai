@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     "creditSubAccount": "貸方補助科目名、なければ空文字 ''",
     "creditTaxType": "貸方税区分 (原則 '対象外')、判断できない場合は '要確認'",
     "creditAmount": "貸方金額(数値)。amountと一致させること。判定不能時は '要確認'",
-    "summary": "摘要 (例: 「支払先名 事務用品購入 (10%対象)」)",
+    "summary": "摘要 (例: 「支払先名 事務用品購入 (10%対象)」)。※重要: 摘要の中に取引日付 (例: '08/15', '2026/08/25') を含めないでください。",
     "uncertainFields": ["自信のない項目や要確認となった項目のキー名の配列"]
   }
 ]

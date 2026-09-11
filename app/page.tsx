@@ -9,7 +9,7 @@ import {
   AnalysisHistoryItem,
   PageDetail,
 } from "@/types/journal";
-import { generateYayoiCsvBlob, generateYayoiTxtBlob } from "@/lib/yayoi";
+import { generateYayoiCsvBlob, generateYayoiTxtBlob, normalizeDateToSeireki } from "@/lib/yayoi";
 import { runWithConcurrencyLimit } from "@/lib/queue";
 import { convertPdfToHighResImages } from "@/lib/pdf-helper";
 
@@ -73,6 +73,8 @@ export default function Home() {
 
   const [bulkTaxSide, setBulkTaxSide] = useState<"debit" | "credit">("debit");
   const [bulkTaxValue, setBulkTaxValue] = useState<string>("対象外");
+
+  const [bulkDateValue, setBulkDateValue] = useState<string>("");
 
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState<boolean>(false);
 
@@ -316,12 +318,102 @@ export default function Home() {
     );
 
     try {
-      // 通帳モードかつ PDF の場合は、ブラウザ側で高解像度画像にページ分割して1ページずつ解析
+      // 【ケースA】 領収書モードかつ PDF の場合：1ページずつPNG画像化して /api/analyze に順次送信
+      if (appMode === "receipt" && item.file.type === "application/pdf") {
+        setCurrentFiles((prev) =>
+          prev.map((i) =>
+            i.id === item.id
+              ? { ...i, progressMessage: "領収書PDFをページ画像へ展開中..." }
+              : i
+          )
+        );
+
+        const pageImages = await convertPdfToHighResImages(item.file);
+        const totalPages = pageImages.length;
+
+        const allIntegratedItems: ReceiptAnalysisResult[] = [];
+
+        for (let idx = 0; idx < totalPages; idx++) {
+          const pImg = pageImages[idx];
+          const pageNum = pImg.pageNumber;
+
+          setCurrentFiles((prev) =>
+            prev.map((i) =>
+              i.id === item.id
+                ? {
+                    ...i,
+                    status: "analyzing",
+                    progressMessage: `${pageNum}/${totalPages} ページ目を解析中...`,
+                  }
+                : i
+            )
+          );
+
+          const formData = new FormData();
+          formData.append("file", pImg.blob, pImg.fileName);
+
+          const res = await fetch("/api/analyze", {
+            method: "POST",
+            body: formData,
+          });
+
+          const contentType = res.headers.get("content-type") || "";
+          let json: AnalyzeApiResponse;
+          if (contentType.includes("application/json")) {
+            json = await res.json();
+          } else {
+            const textError = await res.text();
+            const cleanText = textError.replace(/<[^>]*>?/gm, "").trim();
+            throw new Error(
+              cleanText || `サーバーエラーが発生しました (HTTP ${res.status})`
+            );
+          }
+
+          if (!res.ok || !json.success || !json.data) {
+            throw new Error(
+              json.error ||
+                `Page ${pageNum} の解析に失敗しました (HTTP ${res.status})`
+            );
+          }
+
+          const items = json.data;
+          items.forEach((entry) => {
+            entry.pageNumber = pageNum;
+            // 元号年 (08, 09等) を西暦 YYYY-MM-DD に正規化
+            entry.date = normalizeDateToSeireki(entry.date);
+            allIntegratedItems.push(entry);
+          });
+        }
+
+        setInitialBackup((prev) => ({
+          ...prev,
+          [item.id]: JSON.parse(JSON.stringify(allIntegratedItems)),
+        }));
+        setSelectedPageMap((prev) => ({ ...prev, [item.id]: 1 }));
+
+        setCurrentFiles((prev) =>
+          prev.map((i) =>
+            i.id === item.id
+              ? {
+                  ...i,
+                  status: "completed",
+                  results: allIntegratedItems,
+                  detectedCount: allIntegratedItems.length,
+                  progressMessage: undefined,
+                  errorMessage: undefined,
+                }
+              : i
+          )
+        );
+        return;
+      }
+
+      // 【ケースB】 通帳モードかつ PDF の場合：1ページずつPNG画像化して /api/analyze-bankbook に順次送信
       if (appMode === "bankbook" && item.file.type === "application/pdf") {
         setCurrentFiles((prev) =>
           prev.map((i) =>
             i.id === item.id
-              ? { ...i, progressMessage: "PDFをページ画像へ展開中..." }
+              ? { ...i, progressMessage: "通帳PDFをページ画像へ展開中..." }
               : i
           )
         );
@@ -385,7 +477,7 @@ export default function Home() {
           const items = json.data;
           totalDetected += json.detectedCount || items.length;
 
-          // ページを跨ぐ日付補完とページ番号付与
+          // ページを跨ぐ日付補完とページ番号付与、元号西暦正規化
           items.forEach((entry) => {
             entry.pageNumber = pageNum;
             if (!entry.date || entry.date === "要確認") {
@@ -393,6 +485,7 @@ export default function Home() {
                 entry.date = lastValidDate;
               }
             } else {
+              entry.date = normalizeDateToSeireki(entry.date);
               lastValidDate = entry.date;
             }
             allIntegratedItems.push(entry);
@@ -429,7 +522,7 @@ export default function Home() {
         return;
       }
 
-      // 単一画像ファイル（領収書または通帳単枚画像）の場合の処理
+      // 【ケースC】 単一画像ファイル（領収書画像または通帳単枚画像）の場合の処理
       const formData = new FormData();
       formData.append("file", item.file);
 
@@ -458,7 +551,10 @@ export default function Home() {
         throw new Error(json.error || `解析に失敗しました (HTTP ${res.status})`);
       }
 
-      const results = json.data;
+      const results = json.data.map((entry) => ({
+        ...entry,
+        date: normalizeDateToSeireki(entry.date),
+      }));
       const detectedCount = json.detectedCount;
       const pages = json.pages;
 
@@ -543,13 +639,18 @@ export default function Home() {
     fieldKey: keyof ReceiptAnalysisResult,
     value: string | number
   ) => {
+    const finalValue =
+      fieldKey === "date" && typeof value === "string"
+        ? normalizeDateToSeireki(value)
+        : value;
+
     setCurrentFiles((prev) =>
       prev.map((item) => {
         if (item.id !== fileId || !item.results) return item;
         const nextResults = [...item.results];
         nextResults[resultIndex] = {
           ...nextResults[resultIndex],
-          [fieldKey]: value,
+          [fieldKey]: finalValue,
         };
         return { ...item, results: nextResults };
       })
@@ -683,6 +784,30 @@ export default function Home() {
             } else {
               return { ...entry, creditTaxType: bulkTaxValue };
             }
+          }
+          return entry;
+        });
+
+        return { ...item, results: nextResults };
+      })
+    );
+
+    setSelectedKeys(new Set());
+  };
+
+  const handleApplyBulkDateChange = () => {
+    if (selectedKeys.size === 0 || !bulkDateValue.trim()) return;
+
+    const normalizedDate = normalizeDateToSeireki(bulkDateValue.trim());
+
+    setCurrentFiles((prev) =>
+      prev.map((item) => {
+        if (item.status !== "completed" || !item.results) return item;
+
+        const nextResults = item.results.map((entry, resIdx) => {
+          const key = `${item.id}_${resIdx}`;
+          if (selectedKeys.has(key)) {
+            return { ...entry, date: normalizedDate };
           }
           return entry;
         });
@@ -1006,11 +1131,7 @@ export default function Home() {
               >
                 <input
                   type="file"
-                  accept={
-                    appMode === "receipt"
-                      ? "image/png,image/jpeg,image/jpg,image/webp"
-                      : "image/png,image/jpeg,image/jpg,image/webp,application/pdf"
-                  }
+                  accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf"
                   multiple
                   onChange={onFileInputChange}
                   className="absolute inset-0 z-10 cursor-pointer opacity-0"
@@ -1363,7 +1484,27 @@ export default function Home() {
                   </div>
 
                   {/* 一括変更・削除フォーム群 */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+                    {/* 日付変更 */}
+                    <div className="rounded-lg bg-white p-2.5 border border-slate-200 space-y-1.5 shadow-sm">
+                      <label className="text-[10px] font-bold text-slate-700 block">
+                        取引日付の一括変更
+                      </label>
+                      <input
+                        type="date"
+                        value={bulkDateValue}
+                        onChange={(e) => setBulkDateValue(e.target.value)}
+                        className="w-full rounded border border-slate-300 bg-slate-50 px-2 py-0.5 text-xs text-slate-800 focus:outline-none"
+                      />
+                      <button
+                        onClick={handleApplyBulkDateChange}
+                        disabled={selectedKeys.size === 0 || !bulkDateValue.trim()}
+                        className="w-full rounded bg-emerald-600 px-2 py-1 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      >
+                        日付一括変更
+                      </button>
+                    </div>
+
                     {/* 科目変更 */}
                     <div className="rounded-lg bg-white p-2.5 border border-slate-200 space-y-1.5 shadow-sm">
                       <label className="text-[10px] font-bold text-slate-700 block">
