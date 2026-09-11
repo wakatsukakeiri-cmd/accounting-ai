@@ -10,6 +10,7 @@ import {
   PageDetail,
 } from "@/types/journal";
 import { generateYayoiCsvBlob, generateYayoiTxtBlob, normalizeDateToSeireki } from "@/lib/yayoi";
+import { generateYayoiExcelBlob, ExcelExportItem } from "@/lib/excel";
 import { runWithConcurrencyLimit } from "@/lib/queue";
 import { convertPdfToHighResImages } from "@/lib/pdf-helper";
 
@@ -57,6 +58,7 @@ export default function Home() {
   const [isBatchProcessing, setIsBatchProcessing] = useState<boolean>(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [showWarningModal, setShowWarningModal] = useState<boolean>(false);
+  const [pendingDownloadType, setPendingDownloadType] = useState<"csv" | "excel">("csv");
 
   // 複数仕訳の一括選択キーセット ("${fileId}_${resIdx}")
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
@@ -857,6 +859,8 @@ export default function Home() {
     const uncertainList: string[] = [];
     const allCompletedEntries: ReceiptAnalysisResult[] = [];
     const selectedEntries: ReceiptAnalysisResult[] = [];
+    const allCompletedExportItems: ExcelExportItem[] = [];
+    const selectedExportItems: ExcelExportItem[] = [];
 
     const isSelectionActive = selectedKeys.size > 0;
 
@@ -868,11 +872,14 @@ export default function Home() {
         item.results.forEach((entry, idx) => {
           totalEntries++;
           allCompletedEntries.push(entry);
+          const exportItem: ExcelExportItem = { entry, fileName: item.fileName };
+          allCompletedExportItems.push(exportItem);
 
           const entryKey = `${item.id}_${idx}`;
           const isSelected = selectedKeys.has(entryKey);
           if (isSelected) {
             selectedEntries.push(entry);
+            selectedExportItems.push(exportItem);
           }
 
           const isTargetForExport = isSelectionActive ? isSelected : true;
@@ -926,6 +933,7 @@ export default function Home() {
     });
 
     const exportEntries = isSelectionActive ? selectedEntries : allCompletedEntries;
+    const exportExportItems = isSelectionActive ? selectedExportItems : allCompletedExportItems;
     const diff = totalDebitSum - totalCreditSum;
     const canExport =
       completedFiles > 0 &&
@@ -939,6 +947,7 @@ export default function Home() {
       errorFiles,
       totalEntries,
       exportEntries,
+      exportExportItems,
       isSelectionActive,
       totalDebitSum,
       totalCreditSum,
@@ -973,13 +982,40 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
-  const handleDownloadClick = () => {
+  const executeDownloadYayoiExcel = async () => {
+    if (!summary.canExport || summary.exportExportItems.length === 0) return;
+
+    const isBankbook = appMode === "bankbook";
+    const blob = await generateYayoiExcelBlob(summary.exportExportItems, appMode);
+
+    const url = URL.createObjectURL(blob);
+
+    const nowStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const prefix = isBankbook ? "Yayoi_Bankbook" : "Yayoi_Receipt";
+    const selectedTag = summary.isSelectionActive ? "_Selected" : "";
+    const fileName = `${prefix}${selectedTag}_Journal_${nowStr}.xlsx`;
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadClick = (type: "csv" | "excel" = "csv") => {
     if (!summary.canExport) return;
+    setPendingDownloadType(type);
 
     if (summary.uncertainList.length > 0) {
       setShowWarningModal(true);
     } else {
-      executeDownloadYayoiCsv();
+      if (type === "csv") {
+        executeDownloadYayoiCsv();
+      } else {
+        executeDownloadYayoiExcel();
+      }
     }
   };
 
@@ -1899,17 +1935,33 @@ export default function Home() {
                     )}
                   </div>
 
-                  <button
-                    onClick={handleDownloadClick}
-                    disabled={!summary.canExport}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 font-bold text-xs text-white shadow-md shadow-emerald-500/20 transition-all hover:from-emerald-700 hover:to-teal-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-                  >
-                    <span>
-                      {summary.isSelectionActive
-                        ? `弥生会計用CSV (選択した ${summary.exportEntries.length} 件の仕訳) をダウンロード (.csv)`
-                        : `弥生会計用CSV (全 ${summary.totalEntries} 件の仕訳) をダウンロード (.csv)`}
-                    </span>
-                  </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
+                    <button
+                      onClick={() => handleDownloadClick("csv")}
+                      disabled={!summary.canExport}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 font-bold text-xs text-white shadow-md shadow-emerald-500/20 transition-all hover:from-emerald-700 hover:to-teal-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                    >
+                      <span className="text-base">📄</span>
+                      <span>
+                        {summary.isSelectionActive
+                          ? `弥生会計用CSV (選択 ${summary.exportEntries.length}件) (.csv)`
+                          : `弥生会計用CSV (全 ${summary.totalEntries}件) (.csv)`}
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={() => handleDownloadClick("excel")}
+                      disabled={!summary.canExport}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 font-bold text-xs text-white shadow-md shadow-blue-500/20 transition-all hover:from-blue-700 hover:to-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                    >
+                      <span className="text-base">📊</span>
+                      <span>
+                        {summary.isSelectionActive
+                          ? `Excel仕訳帳 (選択 ${summary.exportEntries.length}件) (.xlsx)`
+                          : `Excel仕訳帳 (全 ${summary.totalEntries}件) (.xlsx)`}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1956,7 +2008,7 @@ export default function Home() {
               <h3 className="text-lg font-bold text-slate-900">要確認項目が残っています</h3>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              仕訳の中に「要確認」の項目が含まれています。このまま弥生会計26用CSV (.csv) をダウンロードしますか？
+              仕訳の中に「要確認」の項目が含まれています。このまま{pendingDownloadType === "csv" ? "弥生会計26用CSV (.csv)" : "Excel (.xlsx)"}をダウンロードしますか？
             </p>
 
             <div className="max-h-40 overflow-y-auto rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
@@ -1978,7 +2030,11 @@ export default function Home() {
               <button
                 onClick={() => {
                   setShowWarningModal(false);
-                  executeDownloadYayoiCsv();
+                  if (pendingDownloadType === "csv") {
+                    executeDownloadYayoiCsv();
+                  } else {
+                    executeDownloadYayoiExcel();
+                  }
                 }}
                 className="rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-900 hover:bg-amber-400 transition-colors shadow-sm"
               >
