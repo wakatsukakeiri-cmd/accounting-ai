@@ -218,18 +218,14 @@ export default function Home() {
     if (!selectedFiles || selectedFiles.length === 0) return;
 
     const validFiles: File[] = Array.from(selectedFiles).filter((f) => {
-      if (appMode === "receipt") {
-        return f.type.startsWith("image/");
-      } else {
-        return f.type.startsWith("image/") || f.type === "application/pdf";
-      }
+      const isImg = f.type.startsWith("image/");
+      const isPdf = f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
+      return isImg || isPdf;
     });
 
     if (validFiles.length === 0) {
       setGlobalError(
-        appMode === "receipt"
-          ? "領収書モードでは画像ファイル (.png, .jpg, .jpeg, .webp 等) を選択してください。"
-          : "通帳モードでは画像ファイル (.png, .jpg, .webp 等) または 通帳PDF (.pdf) を選択してください。"
+        "画像ファイル (.png, .jpg, .jpeg, .webp 等) または PDFファイル (.pdf) を選択してください。"
       );
       return;
     }
@@ -318,8 +314,12 @@ export default function Home() {
     );
 
     try {
+      const isPdf =
+        item.file.type === "application/pdf" ||
+        item.file.name.toLowerCase().endsWith(".pdf");
+
       // 【ケースA】 領収書モードかつ PDF の場合：1ページずつPNG画像化して /api/analyze に順次送信
-      if (appMode === "receipt" && item.file.type === "application/pdf") {
+      if (appMode === "receipt" && isPdf) {
         setCurrentFiles((prev) =>
           prev.map((i) =>
             i.id === item.id
@@ -409,7 +409,7 @@ export default function Home() {
       }
 
       // 【ケースB】 通帳モードかつ PDF の場合：1ページずつPNG画像化して /api/analyze-bankbook に順次送信
-      if (appMode === "bankbook" && item.file.type === "application/pdf") {
+      if (appMode === "bankbook" && isPdf) {
         setCurrentFiles((prev) =>
           prev.map((i) =>
             i.id === item.id
@@ -1155,12 +1155,12 @@ export default function Home() {
                   </div>
                   <div className="text-xs font-bold text-slate-700">
                     {appMode === "receipt"
-                      ? "領収書画像をドラッグ＆ドロップ"
+                      ? "領収書画像・PDFをドラッグ＆ドロップ"
                       : "通帳画像・PDF(全ページ)をドラッグ＆ドロップ"}
                   </div>
                   <p className="text-[10px] text-slate-500">
                     {appMode === "receipt"
-                      ? "またはクリックして選択 (.png, .jpg, .webp 複数選択可)"
+                      ? "またはクリックして選択 (.png, .jpg, .webp, .pdf 複数選択可)"
                       : "またはクリックして選択 (.png, .jpg, .webp, .pdf 全ページ自動処理)"}
                   </p>
                 </div>
