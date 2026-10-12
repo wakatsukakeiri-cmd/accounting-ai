@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
 import { ReceiptAnalysisResult } from "@/types/journal";
+import { getCompanyReferenceRulesPromptServer } from "@/lib/db/reference-book-server";
 
 export const maxDuration = 60;
 
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
+    const companyId = formData.get("companyId") as string | null;
 
     if (!file) {
       return NextResponse.json(
@@ -44,9 +46,13 @@ export async function POST(request: Request) {
 
     const ai = new GoogleGenAI({ apiKey });
 
+    // 会社の過去帳簿ルールを取得
+    const referenceRulesPrompt = await getCompanyReferenceRulesPromptServer(companyId);
+
     const systemPrompt = `
-あなたは日本の会計・経理プロフェッショナルAIです。
+あなたはお客さまの会社専属の日本の会計・経理プロフェッショナルAIです。
 提供された領収書・レシートの画像から取引内容を精密に読み取り、弥生会計に適合する仕訳データの【配列 (JSON Array)】を抽出してください。
+${referenceRulesPrompt}
 
 【最重要: 複数税率(10%・8%軽減税率)の分割ルール】
 1. 1枚の領収書・レシートの中に「標準税率10%対象額」と「軽減税率8%対象額」が混在している場合は、必ず税率ごとに分けて集計し、**仕訳オブジェクトを2件（配列に2要素）作成**してください。
@@ -60,8 +66,14 @@ export async function POST(request: Request) {
 3. 不鮮明、文字が隠れている、該当記述がない、または確定的な判断ができない項目については、絶対に推測で埋めず、文字列 "要確認" と出力してください。
 4. 【支払方法・決済手段】が領収書から明確に判別・印字されている場合は、決済手段の種類（クレジットカード、電子マネー、現金、預金等）にかかわらず、貸方勘定科目 (creditAccount) には一律「現金」を出力してください。ただし、領収書から支払方法を確実に判断・確認できない場合は、絶対に推測せず 貸方勘定科目 (creditAccount) を「要確認」としてください。
 5. "要確認" に設定した項目、または自信が持てない項目名(例: "date", "debitAccount", "creditAccount", "debitTaxType" 等)の英名を uncertainFields 配列に含めてください。
-6. 借方勘定科目 (debitAccount) は「消耗品費」「旅費交通費」「会議費」「接待交際費」「通信費」「新聞図書費」「雑費」等の一般的な科目を選択してください。
-7. 貸方税区分 (creditTaxType) は原則「対象外」としてください。
+6. **借方勘定科目 (debitAccount)** は、上記の【最優先遵守ルール：過去実績ルール】に該当または類似する取引先や品名があれば、その過去実績の勘定科目・税区分・補助科目を最優先で適用してください。過去実績に該当がない場合は「消耗品費」「旅費交通費」「会議費」「接待交際費」「通信費」「新聞図書費」「雑費」等の一般的な科目から取引内容に応じて選択してください。
+7. **補助科目 (debitSubAccount / creditSubAccount)** の設定ルール:
+   - 過去実績ルールに補助科目がある場合はそれを最優先で適用してください。
+   - 借方補助科目 (debitSubAccount):
+     - 取引先名・店舗名 (payee) や品目カテゴリ（例: 交通費における 'タクシー', '新幹線'、通信費における '携帯電話', 'インターネット回線'、消耗品費における '事務用品', 'PC周辺機器' 等）が明らかな場合は補助科目を設定してください。
+     - 買掛金や未払金の場合は、相手先名やクレジットカード会社名を必ず補助科目に設定してください。
+   - 貸方補助科目 (creditSubAccount): クレジットカード決済や電子マネー決済のカード種別（例: 'JCB', '三井住友カード', 'Suica' 等）が判明している場合は設定し、現金払いや不明な場合は空文字 '' としてください。
+8. 貸方税区分 (creditTaxType) は原則「対象外」としてください。
 
 【出力JSONスキーマ (仕訳オブジェクトの配列)】
 [
@@ -71,7 +83,7 @@ export async function POST(request: Request) {
     "description": "取引内容・購入品目等の概要、判断できない場合は '要確認'",
     "amount": "該当税率の対象金額(数値)。数値化できない場合は '要確認'",
     "debitAccount": "推測される借方勘定科目名、判断できない場合は '要確認'",
-    "debitSubAccount": "借方補助科目名、なければ空文字 ''",
+    "debitSubAccount": "推測される借方補助科目名 (過去実績、または店舗名・取引カテゴリ・カード名等)。なければ空文字 ''",
     "debitTaxType": "借方税区分 ('課対仕入10%', '課対仕入8%(軽)', '対象外' 等)、判断できない場合は '要確認'",
     "debitAmount": "借方金額(数値)。amountと一致させること。判定不能時は '要確認'",
     "creditAccount": "支払方法が確実に判断できる場合は一律 '現金' とし、確実に判断できない場合は絶対に推測せず '要確認'",

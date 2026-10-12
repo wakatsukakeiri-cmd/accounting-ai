@@ -1,4 +1,6 @@
 export interface ReceiptAnalysisResult {
+  /** DBレコードID (UUID) */
+  id?: string;
   /** 取引日 (例: "2026-08-25" または "要確認") */
   date: string;
   /** 支払先・店舗名 / 相手先印字 (例: "○○株式会社", "タカギ ユキオ" または "要確認") */
@@ -36,6 +38,7 @@ export interface ReceiptAnalysisResult {
   balance?: number | string;
   rawText?: string;
   pageNumber?: number; // 通帳PDFの該当ページ番号 (1, 2, 3...)
+  originalFileName?: string; // 元ファイル名
 }
 
 export interface PageDetail {
@@ -71,6 +74,10 @@ export type AppMode = "receipt" | "bankbook";
 
 export interface AnalysisHistoryItem {
   id: string;
+  companyId?: string; // 所属会社ID (会社別履歴分離用)
+  userId?: string; // 作成者ユーザーID
+  createdByName?: string | null; // 作成者の表示名
+  createdByEmail?: string | null; // 作成者のメールアドレス
   createdAt: string; // ISO 日時文字列
   mode: AppMode;
   fileNames: string[];

@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, ChangeEvent, DragEvent } from "react";
+import { useState, useEffect, useRef, ChangeEvent, DragEvent } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ReceiptAnalysisResult,
   AnalyzeApiResponse,
@@ -13,6 +15,13 @@ import { generateYayoiCsvBlob, generateYayoiTxtBlob, normalizeDateToSeireki } fr
 import { generateYayoiExcelBlob, ExcelExportItem } from "@/lib/excel";
 import { runWithConcurrencyLimit } from "@/lib/queue";
 import { convertPdfToHighResImages } from "@/lib/pdf-helper";
+import CompanySwitcher from "@/components/CompanySwitcher";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  fetchCompanyAnalysisHistories,
+  saveCompanyAnalysisHistory,
+  deleteCompanyAnalysisHistory,
+} from "@/lib/db/history";
 
 const COMMON_DEBIT_ACCOUNTS = [
   "仮払金",
@@ -90,20 +99,166 @@ export default function Home() {
   const currentFiles = appMode === "receipt" ? receiptFiles : bankbookFiles;
   const setCurrentFiles = appMode === "receipt" ? setReceiptFiles : setBankbookFiles;
 
-  // ローカルストレージからの履歴読み込み
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("accounting_ai_history");
-      if (saved) {
-        setHistoryList(JSON.parse(saved));
-      }
-    } catch {
-      // localStorage read error ignored
-    }
-  }, []);
+  const router = useRouter();
+  const { currentCompany, user, isLoading } = useAuth();
+  const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
+  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState<boolean>(true);
 
-  // 履歴のローカルストレージ自動保存
-  const saveSnapshotToHistory = (
+  // 1. 未ログイン状態ではログイン画面へリダイレクト（仕訳作成UIは非表示）
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace("/login");
+    }
+  }, [isLoading, user, router]);
+
+  // 2. 会社ごとの仕訳作業スペース分離
+  const prevCompanyIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!currentCompany) return;
+
+    // 前回の会社データをローカル退避
+    if (prevCompanyIdRef.current && prevCompanyIdRef.current !== currentCompany.id) {
+      try {
+        const workspaceData = {
+          receiptFiles: receiptFiles.map((f) => ({
+            id: f.id,
+            fileName: f.fileName,
+            status: f.status,
+            results: f.results,
+            detectedCount: f.detectedCount,
+            pages: f.pages,
+          })),
+          bankbookFiles: bankbookFiles.map((f) => ({
+            id: f.id,
+            fileName: f.fileName,
+            status: f.status,
+            results: f.results,
+            detectedCount: f.detectedCount,
+            pages: f.pages,
+          })),
+          initialBackup,
+        };
+        localStorage.setItem(
+          `accounting_workspace_${prevCompanyIdRef.current}`,
+          JSON.stringify(workspaceData)
+        );
+      } catch (e) {
+        console.error("Failed to save workspace for prev company:", e);
+      }
+    }
+
+    // 新会社データの復元
+    if (prevCompanyIdRef.current !== currentCompany.id) {
+      prevCompanyIdRef.current = currentCompany.id;
+
+      try {
+        const saved = localStorage.getItem(`accounting_workspace_${currentCompany.id}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setReceiptFiles(
+            (parsed.receiptFiles || []).map((f: any) => ({
+              ...f,
+              file: new File([], f.fileName),
+              previewUrl: "",
+            }))
+          );
+          setBankbookFiles(
+            (parsed.bankbookFiles || []).map((f: any) => ({
+              ...f,
+              file: new File([], f.fileName),
+              previewUrl: "",
+            }))
+          );
+          setInitialBackup(parsed.initialBackup || {});
+        } else {
+          setReceiptFiles([]);
+          setBankbookFiles([]);
+          setInitialBackup({});
+        }
+      } catch (e) {
+        console.error("Failed to load workspace for company:", e);
+        setReceiptFiles([]);
+        setBankbookFiles([]);
+        setInitialBackup({});
+      }
+
+      setSelectedKeys(new Set());
+      setActiveFileTab("all");
+    }
+  }, [currentCompany?.id]);
+
+  // 会社作業中データの自動保存 (debounce 1秒)
+  useEffect(() => {
+    if (!currentCompany) return;
+
+    const timeout = setTimeout(() => {
+      try {
+        const workspaceData = {
+          receiptFiles: receiptFiles.map((f) => ({
+            id: f.id,
+            fileName: f.fileName,
+            status: f.status,
+            results: f.results,
+            detectedCount: f.detectedCount,
+            pages: f.pages,
+          })),
+          bankbookFiles: bankbookFiles.map((f) => ({
+            id: f.id,
+            fileName: f.fileName,
+            status: f.status,
+            results: f.results,
+            detectedCount: f.detectedCount,
+            pages: f.pages,
+          })),
+          initialBackup,
+        };
+        localStorage.setItem(
+          `accounting_workspace_${currentCompany.id}`,
+          JSON.stringify(workspaceData)
+        );
+      } catch {}
+    }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, [currentCompany?.id, receiptFiles, bankbookFiles, initialBackup]);
+
+  // 3. 会社が選択されている場合、Supabase DBから最新の解析履歴をロード
+  useEffect(() => {
+    let isMounted = true;
+
+    if (currentCompany) {
+      const loadCloudHistory = async () => {
+        setIsLoadingHistory(true);
+        try {
+          const list = await fetchCompanyAnalysisHistories(currentCompany.id);
+          if (isMounted) {
+            setHistoryList(list);
+          }
+        } catch (err) {
+          console.error("Failed to fetch cloud analysis histories:", err);
+        } finally {
+          if (isMounted) setIsLoadingHistory(false);
+        }
+      };
+      loadCloudHistory();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentCompany?.id]);
+
+  // 選択中会社の履歴のみに絞り込み
+  const filteredHistoryList = historyList.filter((item) => {
+    if (currentCompany) {
+      return item.companyId === currentCompany.id;
+    }
+    return !item.companyId;
+  });
+
+  // 履歴保存（会社選択時はクラウドDB保存、未ログイン時はlocalStorage保存）
+  const saveSnapshotToHistory = async (
     targetMode: AppMode,
     files: ReceiptFileItem[]
   ) => {
@@ -137,37 +292,46 @@ export default function Home() {
       };
     });
 
-    const newRecord: AnalysisHistoryItem = {
-      id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      createdAt: new Date().toISOString(),
-      mode: targetMode,
-      fileNames: completedItems.map((f) => f.fileName),
-      totalEntries,
-      totalAmount,
-      filesData,
-    };
+    const fileNames = completedItems.map((f) => f.fileName);
 
-    setHistoryList((prev) => {
-      if (prev.length > 0) {
-        const last = prev[0];
-        const isSameFiles = JSON.stringify(last.fileNames) === JSON.stringify(newRecord.fileNames);
-        const isSameEntries = last.totalEntries === newRecord.totalEntries;
-        const isSameAmount = last.totalAmount === newRecord.totalAmount;
-        const isRecent = Date.now() - new Date(last.createdAt).getTime() < 3000;
-
-        if (isSameFiles && isSameEntries && isSameAmount && isRecent) {
-          return prev;
-        }
-      }
-
-      const updated = [newRecord, ...prev].slice(0, 20);
+    if (currentCompany) {
       try {
-        localStorage.setItem("accounting_ai_history", JSON.stringify(updated));
-      } catch {
-        // ignore
+        const res = await saveCompanyAnalysisHistory({
+          companyId: currentCompany.id,
+          mode: targetMode,
+          fileNames,
+          totalEntries,
+          totalAmount,
+          filesData,
+        });
+        if (res.success) {
+          const latestList = await fetchCompanyAnalysisHistories(currentCompany.id);
+          setHistoryList(latestList);
+        }
+      } catch (err) {
+        console.error("Failed to save history to cloud DB:", err);
       }
-      return updated;
-    });
+    } else {
+      const newRecord: AnalysisHistoryItem = {
+        id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        createdAt: new Date().toISOString(),
+        mode: targetMode,
+        fileNames,
+        totalEntries,
+        totalAmount,
+        filesData,
+      };
+
+      setHistoryList((prev) => {
+        const updated = [newRecord, ...prev].slice(0, 20);
+        try {
+          localStorage.setItem("accounting_ai_history", JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
+        return updated;
+      });
+    }
   };
 
   // 履歴からの復元処理
@@ -204,16 +368,25 @@ export default function Home() {
     setShowHistoryModal(false);
   };
 
-  const handleDeleteHistoryRecord = (id: string) => {
-    setHistoryList((prev) => {
-      const updated = prev.filter((item) => item.id !== id);
+  const handleDeleteHistoryRecord = async (id: string) => {
+    if (currentCompany) {
       try {
-        localStorage.setItem("accounting_ai_history", JSON.stringify(updated));
-      } catch {
-        // ignore
+        await deleteCompanyAnalysisHistory(id);
+        setHistoryList((prev) => prev.filter((item) => item.id !== id));
+      } catch (err) {
+        console.error("Failed to delete history from DB:", err);
       }
-      return updated;
-    });
+    } else {
+      setHistoryList((prev) => {
+        const updated = prev.filter((item) => item.id !== id);
+        try {
+          localStorage.setItem("accounting_ai_history", JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
+        return updated;
+      });
+    }
   };
 
   const handleFilesAdded = (selectedFiles: FileList | File[] | null) => {
@@ -353,6 +526,9 @@ export default function Home() {
 
           const formData = new FormData();
           formData.append("file", pImg.blob, pImg.fileName);
+          if (currentCompany) {
+            formData.append("companyId", currentCompany.id);
+          }
 
           const res = await fetch("/api/analyze", {
             method: "POST",
@@ -387,9 +563,11 @@ export default function Home() {
           });
         }
 
+        const finalIntegratedItems = allIntegratedItems;
+
         setInitialBackup((prev) => ({
           ...prev,
-          [item.id]: JSON.parse(JSON.stringify(allIntegratedItems)),
+          [item.id]: JSON.parse(JSON.stringify(finalIntegratedItems)),
         }));
         setSelectedPageMap((prev) => ({ ...prev, [item.id]: 1 }));
 
@@ -399,8 +577,8 @@ export default function Home() {
               ? {
                   ...i,
                   status: "completed",
-                  results: allIntegratedItems,
-                  detectedCount: allIntegratedItems.length,
+                  results: finalIntegratedItems,
+                  detectedCount: finalIntegratedItems.length,
                   progressMessage: undefined,
                   errorMessage: undefined,
                 }
@@ -446,6 +624,9 @@ export default function Home() {
 
           const formData = new FormData();
           formData.append("file", pImg.blob, pImg.fileName);
+          if (currentCompany) {
+            formData.append("companyId", currentCompany.id);
+          }
 
           const startTime = performance.now();
           const res = await fetch("/api/analyze-bankbook", {
@@ -500,9 +681,11 @@ export default function Home() {
           });
         }
 
+        const finalIntegratedItems = allIntegratedItems;
+
         setInitialBackup((prev) => ({
           ...prev,
-          [item.id]: JSON.parse(JSON.stringify(allIntegratedItems)),
+          [item.id]: JSON.parse(JSON.stringify(finalIntegratedItems)),
         }));
         setSelectedPageMap((prev) => ({ ...prev, [item.id]: 1 }));
 
@@ -512,7 +695,7 @@ export default function Home() {
               ? {
                   ...i,
                   status: "completed",
-                  results: allIntegratedItems,
+                  results: finalIntegratedItems,
                   detectedCount: totalDetected,
                   pages: allPageDetails,
                   progressMessage: undefined,
@@ -527,6 +710,9 @@ export default function Home() {
       // 【ケースC】 単一画像ファイル（領収書画像または通帳単枚画像）の場合の処理
       const formData = new FormData();
       formData.append("file", item.file);
+      if (currentCompany) {
+        formData.append("companyId", currentCompany.id);
+      }
 
       const endpoint =
         appMode === "receipt" ? "/api/analyze" : "/api/analyze-bankbook";
@@ -560,9 +746,11 @@ export default function Home() {
       const detectedCount = json.detectedCount;
       const pages = json.pages;
 
+      const finalResults = results;
+
       setInitialBackup((prev) => ({
         ...prev,
-        [item.id]: JSON.parse(JSON.stringify(results)),
+        [item.id]: JSON.parse(JSON.stringify(finalResults)),
       }));
 
       setSelectedPageMap((prev) => ({ ...prev, [item.id]: 1 }));
@@ -573,7 +761,7 @@ export default function Home() {
             ? {
                 ...i,
                 status: "completed",
-                results,
+                results: finalResults,
                 detectedCount,
                 pages,
                 progressMessage: undefined,
@@ -650,10 +838,12 @@ export default function Home() {
       prev.map((item) => {
         if (item.id !== fileId || !item.results) return item;
         const nextResults = [...item.results];
+        const entryToUpdate = nextResults[resultIndex];
         nextResults[resultIndex] = {
-          ...nextResults[resultIndex],
+          ...entryToUpdate,
           [fieldKey]: finalValue,
         };
+
         return { ...item, results: nextResults };
       })
     );
@@ -682,6 +872,7 @@ export default function Home() {
         }
 
         nextResults[resultIndex] = updatedEntry;
+
         return { ...item, results: nextResults };
       })
     );
@@ -755,11 +946,12 @@ export default function Home() {
         const nextResults = item.results.map((entry, resIdx) => {
           const key = `${item.id}_${resIdx}`;
           if (selectedKeys.has(key)) {
-            if (bulkAccountSide === "debit") {
-              return { ...entry, debitAccount: bulkAccountValue.trim() };
-            } else {
-              return { ...entry, creditAccount: bulkAccountValue.trim() };
-            }
+            const updated =
+              bulkAccountSide === "debit"
+                ? { ...entry, debitAccount: bulkAccountValue.trim() }
+                : { ...entry, creditAccount: bulkAccountValue.trim() };
+
+            return updated;
           }
           return entry;
         });
@@ -781,11 +973,12 @@ export default function Home() {
         const nextResults = item.results.map((entry, resIdx) => {
           const key = `${item.id}_${resIdx}`;
           if (selectedKeys.has(key)) {
-            if (bulkTaxSide === "debit") {
-              return { ...entry, debitTaxType: bulkTaxValue };
-            } else {
-              return { ...entry, creditTaxType: bulkTaxValue };
-            }
+            const updated =
+              bulkTaxSide === "debit"
+                ? { ...entry, debitTaxType: bulkTaxValue }
+                : { ...entry, creditTaxType: bulkTaxValue };
+
+            return updated;
           }
           return entry;
         });
@@ -809,7 +1002,9 @@ export default function Home() {
         const nextResults = item.results.map((entry, resIdx) => {
           const key = `${item.id}_${resIdx}`;
           if (selectedKeys.has(key)) {
-            return { ...entry, date: normalizedDate };
+            const updated = { ...entry, date: normalizedDate };
+
+            return updated;
           }
           return entry;
         });
@@ -1027,6 +1222,16 @@ export default function Home() {
     }).format(val);
   };
 
+  // 未ログインまたは認証情報読み込み中は全画面ローダーを表示（ログイン画面へリダイレクト）
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-500">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+        <p className="text-xs font-medium">認証状態を確認中...</p>
+      </div>
+    );
+  }
+
   // 選択中のファイルアイテム
   const activeFileItem =
     activeFileTab !== "all"
@@ -1040,9 +1245,21 @@ export default function Home() {
         <header className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur-md">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-blue-700 shadow-sm mb-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
-                <span>弥生会計26対応</span>
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-blue-700 shadow-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
+                  <span>弥生会計26対応</span>
+                </div>
+                {currentCompany ? (
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 shadow-sm">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    <span>☁️ {currentCompany.name} (クラウド履歴共有中)</span>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-600 shadow-sm">
+                    <span>💻 ローカル作業中 (会社未選択)</span>
+                  </div>
+                )}
               </div>
               <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">
                 AI 会計仕訳作成アシスタント
@@ -1054,13 +1271,35 @@ export default function Home() {
 
             {/* 右側アクションエリア */}
             <div className="flex flex-wrap items-center gap-3">
+              <CompanySwitcher />
+
+              {currentCompany && (
+                <Link
+                  href="/reference-books"
+                  className="flex items-center gap-1.5 rounded-xl bg-indigo-50 px-3.5 py-2 text-xs font-bold text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all shadow-xs"
+                  title="前期・前々期の総勘定元帳・仕訳日記帳・補助残高一覧表を登録・学習"
+                >
+                  <span>📚 過去帳簿・仕訳学習</span>
+                </Link>
+              )}
+
               <button
-                onClick={() => setShowHistoryModal(true)}
+                onClick={async () => {
+                  setShowHistoryModal(true);
+                  if (currentCompany) {
+                    try {
+                      const list = await fetchCompanyAnalysisHistories(currentCompany.id);
+                      setHistoryList(list);
+                    } catch (e) {
+                      console.error(e);
+                    }
+                  }
+                }}
                 className="flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-xs font-bold text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm"
               >
                 <span>📜 解析履歴</span>
                 <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 border border-blue-200">
-                  {historyList.length}件
+                  {filteredHistoryList.length}件
                 </span>
               </button>
 
@@ -1124,10 +1363,44 @@ export default function Home() {
           </div>
         )}
 
+        {/* 現在作業中の会社バナー */}
+        {currentCompany && (
+          <div className="rounded-xl border border-indigo-200 bg-white p-3.5 shadow-xs flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+                {currentCompany.name.slice(0, 1)}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
+                    作業スペース
+                  </span>
+                  <span className="text-sm font-extrabold text-slate-900">
+                    {currentCompany.name}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                  この画面上の仕訳作成・編集内容は「{currentCompany.name}」の作業スペースに独立して保持されています。
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/reference-books"
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100 transition-colors"
+              >
+                <span>📚 前期・前々期の帳簿学習を設定</span>
+                <span>→</span>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Main 2-Column Split View Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Left Column: 元画像・PDFプレビュー & ファイル管理 (lg:col-span-4 xl:col-span-3) */}
-          <section className="lg:col-span-4 xl:col-span-3 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+          {/* Left Column: 元画像・PDFプレビュー & ファイル管理 */}
+          {isLeftPanelOpen && (
+            <section className="lg:col-span-3 xl:col-span-3 space-y-4 animate-in fade-in duration-200">
             {/* アップロードコントロールエリア */}
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/50 space-y-3">
               <div className="flex items-center justify-between">
@@ -1399,10 +1672,11 @@ export default function Home() {
                 )}
               </div>
             )}
-          </section>
+            </section>
+          )}
 
-          {/* Right Column: 仕訳確認・編集・一括操作 & 横一列データテーブル (lg:col-span-8 xl:col-span-9) */}
-          <section className="lg:col-span-8 xl:col-span-9 space-y-4">
+          {/* Right Column: 仕訳確認・編集・一括操作 & 横一列データテーブル */}
+          <section className={`${isLeftPanelOpen ? "lg:col-span-9 xl:col-span-9" : "lg:col-span-12 xl:col-span-12"} space-y-4 transition-all duration-200`}>
             {summary.completedFiles === 0 && !isBatchProcessing && (
               <div className="flex h-full min-h-[420px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
                 <div className="rounded-full bg-slate-100 p-4 text-slate-400 mb-3 border border-slate-200">
@@ -1434,7 +1708,8 @@ export default function Home() {
             {summary.completedFiles > 0 && (
               <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm shadow-slate-200/50 space-y-4">
                 {/* ファイル切替タブバー */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-slate-200">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200">
+                  <div className="flex items-center gap-1.5 overflow-x-auto">
                   <button
                     onClick={() => setActiveFileTab("all")}
                     className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all shrink-0 ${
@@ -1467,6 +1742,16 @@ export default function Home() {
                         </button>
                       );
                     })}
+                  </div>
+
+                  {/* プレビュー表示切替トグルボタン */}
+                  <button
+                    onClick={() => setIsLeftPanelOpen((prev) => !prev)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border border-indigo-200 bg-indigo-50/80 text-indigo-700 hover:bg-indigo-100 transition-all shrink-0 cursor-pointer shadow-xs ml-auto"
+                    title={isLeftPanelOpen ? "プレビューを非表示にして仕訳一覧を全画面表示" : "元画像プレビューを再表示"}
+                  >
+                    <span>{isLeftPanelOpen ? "⤢ 全幅表示 (プレビューを隠す)" : "◨ プレビューを表示"}</span>
+                  </button>
                 </div>
 
                 {/* AI要確認アラートバッジ */}
@@ -1636,20 +1921,22 @@ export default function Home() {
 
                 {/* 横一列データテーブル (スプレッドシート型仕訳一覧) */}
                 <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white max-h-[600px] overflow-y-auto shadow-sm">
-                  <table className="w-full text-left text-xs text-slate-800 border-collapse min-w-[850px]">
-                    <thead className="sticky top-0 z-10 bg-slate-100 border-b border-slate-200 text-slate-700 font-bold shadow-sm">
+                  <table className="w-full text-left text-xs text-slate-800 border-collapse">
+                    <thead className="sticky top-0 z-10 bg-slate-100 border-b border-slate-200 text-slate-700 font-bold shadow-sm text-[11px]">
                       <tr>
-                        <th className="px-2 py-2 w-10 text-center">☑</th>
-                        <th className="px-2 py-2 w-28">元ファイル</th>
-                        <th className="px-2 py-2 w-36">取引日</th>
-                        <th className="px-2 py-2 w-36">相手先 / 支払先</th>
-                        <th className="px-2 py-2 w-32">借方科目</th>
-                        <th className="px-2 py-2 w-28">借方税区分</th>
-                        <th className="px-2 py-2 w-32">貸方科目</th>
-                        <th className="px-2 py-2 w-28">貸方税区分</th>
-                        <th className="px-2 py-2 w-28 text-right">金額 (円)</th>
-                        <th className="px-2 py-2">摘要</th>
-                        <th className="px-2 py-2 w-12 text-center">操作</th>
+                        <th className="px-1.5 py-2 w-7 text-center">☑</th>
+                        <th className="px-1.5 py-2 w-16 text-slate-600">ファイル</th>
+                        <th className="px-1.5 py-2 w-24">取引日</th>
+                        <th className="px-1.5 py-2 w-28">相手先</th>
+                        <th className="px-1.5 py-2 w-28 text-slate-900 font-extrabold">借方科目</th>
+                        <th className="px-1.5 py-2 w-28 text-indigo-700 font-extrabold bg-indigo-50/70 border-x border-indigo-200">借方補助</th>
+                        <th className="px-1.5 py-2 w-20">借方税</th>
+                        <th className="px-1.5 py-2 w-28 text-slate-900 font-extrabold">貸方科目</th>
+                        <th className="px-1.5 py-2 w-28 text-indigo-700 font-extrabold bg-indigo-50/70 border-x border-indigo-200">貸方補助</th>
+                        <th className="px-1.5 py-2 w-20">貸方税</th>
+                        <th className="px-1.5 py-2 w-20 text-right">金額</th>
+                        <th className="px-1.5 py-2 min-w-[100px]">摘要</th>
+                        <th className="px-1.5 py-2 w-8 text-center">操作</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 font-mono">
@@ -1673,7 +1960,7 @@ export default function Home() {
                                 }`}
                               >
                                 {/* チェックボックス */}
-                                <td className="px-2 py-1.5 text-center">
+                                <td className="px-1 py-1 text-center w-8">
                                   <input
                                     type="checkbox"
                                     checked={isSelected}
@@ -1683,7 +1970,7 @@ export default function Home() {
                                 </td>
 
                                 {/* 元ファイル / ページ */}
-                                <td className="px-2 py-1.5 truncate max-w-[120px]" title={fileItem.fileName}>
+                                <td className="px-1 py-1 truncate max-w-[70px]" title={fileItem.fileName}>
                                   <span className="text-[10px] text-slate-700 font-sans block truncate font-medium">
                                     📁 {fileItem.fileName}
                                   </span>
@@ -1695,7 +1982,7 @@ export default function Home() {
                                 </td>
 
                                 {/* 取引日 (全体表示用拡大) */}
-                                <td className="px-2 py-1.5 min-w-[130px]">
+                                <td className="px-1 py-1 w-24">
                                   <input
                                     type="text"
                                     value={String(entry.date)}
@@ -1717,7 +2004,7 @@ export default function Home() {
                                 </td>
 
                                 {/* 相手先 / 支払先 */}
-                                <td className="px-2 py-1.5">
+                                <td className="px-1 py-1 w-28">
                                   <input
                                     type="text"
                                     value={String(entry.payee)}
@@ -1739,7 +2026,7 @@ export default function Home() {
                                 </td>
 
                                 {/* 借方科目 */}
-                                <td className="px-2 py-1.5">
+                                <td className="px-1 py-1 w-28">
                                   <input
                                     type="text"
                                     list={`debit-accounts-${fileItem.id}-${resIdx}`}
@@ -1765,8 +2052,26 @@ export default function Home() {
                                   </datalist>
                                 </td>
 
+                                {/* 借方補助科目 */}
+                                <td className="px-1 py-1 w-28">
+                                  <input
+                                    type="text"
+                                    value={String(entry.debitSubAccount || "")}
+                                    onChange={(e) =>
+                                      handleFieldChange(
+                                        fileItem.id,
+                                        resIdx,
+                                        "debitSubAccount",
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="借方補助"
+                                    className="w-full rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
+                                  />
+                                </td>
+
                                 {/* 借方税区分 */}
-                                <td className="px-2 py-1.5">
+                                <td className="px-1 py-1 w-20">
                                   <select
                                     value={String(entry.debitTaxType)}
                                     onChange={(e) =>
@@ -1789,7 +2094,7 @@ export default function Home() {
                                 </td>
 
                                 {/* 貸方科目 */}
-                                <td className="px-2 py-1.5">
+                                <td className="px-1 py-1 w-28">
                                   <input
                                     type="text"
                                     list={`credit-accounts-${fileItem.id}-${resIdx}`}
@@ -1815,8 +2120,26 @@ export default function Home() {
                                   </datalist>
                                 </td>
 
+                                {/* 貸方補助科目 */}
+                                <td className="px-1 py-1 w-28">
+                                  <input
+                                    type="text"
+                                    value={String(entry.creditSubAccount || "")}
+                                    onChange={(e) =>
+                                      handleFieldChange(
+                                        fileItem.id,
+                                        resIdx,
+                                        "creditSubAccount",
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="貸方補助"
+                                    className="w-full rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
+                                  />
+                                </td>
+
                                 {/* 貸方税区分 */}
-                                <td className="px-2 py-1.5">
+                                <td className="px-1 py-1 w-20">
                                   <select
                                     value={String(entry.creditTaxType)}
                                     onChange={(e) =>
@@ -1839,7 +2162,7 @@ export default function Home() {
                                 </td>
 
                                 {/* 金額 */}
-                                <td className="px-2 py-1.5 text-right font-bold text-emerald-700">
+                                <td className="px-1 py-1 text-right font-bold text-emerald-700 w-20">
                                   <input
                                     type="text"
                                     inputMode="numeric"
@@ -1861,7 +2184,7 @@ export default function Home() {
                                 </td>
 
                                 {/* 摘要 */}
-                                <td className="px-2 py-1.5">
+                                <td className="px-1 py-1 min-w-[100px]">
                                   <input
                                     type="text"
                                     value={String(entry.summary)}
@@ -2053,28 +2376,32 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 <span className="text-xl">📜</span>
                 <h3 className="text-base font-bold text-slate-900">
-                  解析・作成履歴 ({historyList.length} 件)
+                  解析・作成履歴 {currentCompany ? `- ${currentCompany.name} (クラウド共有)` : "(ローカル)"} ({filteredHistoryList.length} 件)
                 </h3>
               </div>
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="text-slate-400 hover:text-slate-700 p-1 font-bold"
+                className="text-slate-400 hover:text-slate-700 p-1 font-bold cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             <p className="text-xs text-slate-500 font-medium">
-              ブラウザに自動保存された過去の仕訳解析履歴です。「復元」ボタンを押すと対象の仕訳データを復元できます。
+              {currentCompany
+                ? `「${currentCompany.name}」のクラウド共有解析履歴です。どのデバイス・どのアカウントからでも共通して閲覧でき、「仕訳を復元」を押すと作業画面に読み込めます。`
+                : "ローカル環境の解析履歴です。「仕訳を復元」ボタンを押すと対象の仕訳データを復元できます。"}
             </p>
 
-            {historyList.length === 0 ? (
+            {filteredHistoryList.length === 0 ? (
               <div className="py-12 text-center text-xs text-slate-500 border border-dashed border-slate-200 rounded-xl bg-slate-50 font-medium">
-                保存された解析履歴はありません。仕訳を作成すると自動的に保存されます。
+                {currentCompany
+                  ? `「${currentCompany.name}」に共有された解析履歴はありません。仕訳を解析すると自動的にクラウド共有されます。`
+                  : "保存された解析履歴はありません。仕訳を作成すると自動的に保存されます。"}
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                {historyList.map((record) => {
+                {filteredHistoryList.map((record) => {
                   const dateStr = new Date(record.createdAt).toLocaleString("ja-JP");
 
                   return (
@@ -2096,6 +2423,14 @@ export default function Home() {
                           <span className="text-xs font-mono text-slate-500">
                             {dateStr}
                           </span>
+                          {(record.createdByName || record.createdByEmail) && (
+                            <span
+                              className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-medium"
+                              title={`作成者: ${record.createdByEmail || ''}`}
+                            >
+                              👤 {record.createdByName || record.createdByEmail}
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2">
