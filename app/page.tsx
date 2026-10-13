@@ -1509,18 +1509,20 @@ export default function Home() {
                 })}
 
                 {/* 専用モード追加ボタン */}
-                {currentCompany && (
-                  <button
-                    onClick={() => {
-                      setEditingCustomMode(null);
-                      setShowCustomModeModal(true);
-                    }}
-                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50 transition-colors border border-dashed border-indigo-300 ml-1 cursor-pointer"
-                    title="この会社専用のアップロードモードとプロンプトを追加"
-                  >
-                    <span>➕ 専用モード追加</span>
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    if (!currentCompany) {
+                      alert("会社が選択されていません。先に右上の会社メニューから会社を選択するか「新しい会社を作成」してください。");
+                      return;
+                    }
+                    setEditingCustomMode(null);
+                    setShowCustomModeModal(true);
+                  }}
+                  className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50 transition-colors border border-dashed border-indigo-300 ml-1 cursor-pointer"
+                  title="この会社専用のアップロードモードとプロンプトを追加"
+                >
+                  <span>➕ 専用モード追加</span>
+                </button>
               </div>
             </div>
           </div>
@@ -2575,6 +2577,28 @@ export default function Home() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* カスタムモード管理モーダル */}
+      {currentCompany && (
+        <CustomModeModal
+          isOpen={showCustomModeModal}
+          onClose={() => {
+            setShowCustomModeModal(false);
+            setEditingCustomMode(null);
+          }}
+          companyId={currentCompany.id}
+          companyName={currentCompany.name}
+          modes={customModes}
+          onModesUpdated={loadCustomModes}
+          onSelectMode={(modeId) => {
+            setAppMode(modeId);
+            setGlobalError(null);
+            setSelectedKeys(new Set());
+            setActiveFileTab("all");
+          }}
+          initialEditMode={editingCustomMode}
+        />
       )}
 
       {/* 解析履歴モーダル */}
