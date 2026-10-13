@@ -36,13 +36,6 @@ export default function CompanySwitcher() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // ログイン済みだが会社が1つもない場合、初回作成モーダルを表示
-  useEffect(() => {
-    if (!isLoading && user && companies.length === 0) {
-      setShowCreateModal(true)
-    }
-  }, [isLoading, user, companies])
-
   const handleCreateCompany = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newCompanyName.trim()) return
@@ -237,7 +230,17 @@ export default function CompanySwitcher() {
       {/* 会社作成モーダル */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl border border-gray-200">
+          <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl border border-gray-200 relative">
+            <button
+              type="button"
+              onClick={() => {
+                setShowCreateModal(false)
+                setCreateError(null)
+              }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold text-sm cursor-pointer"
+            >
+              ✕
+            </button>
             <h3 className="text-base font-bold text-gray-900 mb-1">新しい会社を作成</h3>
             <p className="text-xs text-gray-500 mb-4">
               会社を作成すると、あなたが「オーナー（Owner）」として登録されます。
@@ -266,18 +269,16 @@ export default function CompanySwitcher() {
               </div>
 
               <div className="flex gap-2 pt-2">
-                {companies.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowCreateModal(false)
-                      setCreateError(null)
-                    }}
-                    className="flex-1 py-2 px-3 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
-                  >
-                    キャンセル
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateModal(false)
+                    setCreateError(null)
+                  }}
+                  className="flex-1 py-2 px-3 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+                >
+                  キャンセル
+                </button>
                 <button
                   type="submit"
                   disabled={isCreating || !newCompanyName.trim()}
