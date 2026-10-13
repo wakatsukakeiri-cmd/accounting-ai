@@ -70,7 +70,7 @@ export interface ReceiptFileItem {
   pages?: PageDetail[]; // ページ別詳細
 }
 
-export type AppMode = "receipt" | "bankbook";
+export type AppMode = "receipt" | "bankbook" | (string & {});
 
 export interface AnalysisHistoryItem {
   id: string;

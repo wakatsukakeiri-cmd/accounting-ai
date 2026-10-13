@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, ChangeEvent, DragEvent } from "react";
+import { useState, useEffect, useRef, useCallback, ChangeEvent, DragEvent } from "react";
+import CustomModeModal from "@/components/CustomModeModal";
+import { fetchCompanyCustomModes } from "@/lib/db/custom-mode";
+import type { CustomModeItem } from "@/types/custom-mode";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -96,13 +99,59 @@ export default function Home() {
   const [historyList, setHistoryList] = useState<AnalysisHistoryItem[]>([]);
   const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
 
-  const currentFiles = appMode === "receipt" ? receiptFiles : bankbookFiles;
-  const setCurrentFiles = appMode === "receipt" ? setReceiptFiles : setBankbookFiles;
+  // カスタムモード管理ステート
+  const [customModes, setCustomModes] = useState<CustomModeItem[]>([]);
+  const [customFilesMap, setCustomFilesMap] = useState<Record<string, ReceiptFileItem[]>>({});
+  const [showCustomModeModal, setShowCustomModeModal] = useState<boolean>(false);
+  const [editingCustomMode, setEditingCustomMode] = useState<CustomModeItem | null>(null);
+
+  const currentFiles =
+    appMode === "receipt"
+      ? receiptFiles
+      : appMode === "bankbook"
+      ? bankbookFiles
+      : customFilesMap[appMode] || [];
+
+  const setCurrentFiles: React.Dispatch<React.SetStateAction<ReceiptFileItem[]>> = (
+    action
+  ) => {
+    if (appMode === "receipt") {
+      setReceiptFiles(action);
+    } else if (appMode === "bankbook") {
+      setBankbookFiles(action);
+    } else {
+      setCustomFilesMap((prev) => {
+        const prevList = prev[appMode] || [];
+        const nextList = typeof action === "function" ? action(prevList) : action;
+        return { ...prev, [appMode]: nextList };
+      });
+    }
+  };
+
+  const activeCustomMode = customModes.find((m) => m.id === appMode);
 
   const router = useRouter();
   const { currentCompany, user, isLoading } = useAuth();
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState<boolean>(true);
+
+  // カスタムモード一覧の取得
+  const loadCustomModes = useCallback(async () => {
+    if (!currentCompany) {
+      setCustomModes([]);
+      return;
+    }
+    try {
+      const list = await fetchCompanyCustomModes(currentCompany.id);
+      setCustomModes(list);
+    } catch (e) {
+      console.error("Failed to fetch custom modes:", e);
+    }
+  }, [currentCompany]);
+
+  useEffect(() => {
+    loadCustomModes();
+  }, [loadCustomModes]);
 
   // 1. 未ログイン状態ではログイン画面へリダイレクト（仕訳作成UIは非表示）
   useEffect(() => {
@@ -707,6 +756,97 @@ export default function Home() {
         return;
       }
 
+      // 【ケースB-2】 カスタム専用モードかつ PDF の場合：1ページずつPNG画像化して /api/analyze-custom に順次送信
+      if (appMode !== "receipt" && appMode !== "bankbook" && isPdf) {
+        const curCustom = customModes.find((m) => m.id === appMode);
+        setCurrentFiles((prev) =>
+          prev.map((i) =>
+            i.id === item.id
+              ? { ...i, progressMessage: "PDFをページ画像へ展開中..." }
+              : i
+          )
+        );
+
+        const pageImages = await convertPdfToHighResImages(item.file);
+        const totalPages = pageImages.length;
+        const allIntegratedItems: ReceiptAnalysisResult[] = [];
+
+        for (let idx = 0; idx < totalPages; idx++) {
+          const pImg = pageImages[idx];
+          const pageNum = pImg.pageNumber;
+
+          setCurrentFiles((prev) =>
+            prev.map((i) =>
+              i.id === item.id
+                ? {
+                    ...i,
+                    status: "analyzing",
+                    progressMessage: `${pageNum}/${totalPages} ページ目を解析中...`,
+                  }
+                : i
+            )
+          );
+
+          const formData = new FormData();
+          formData.append("file", pImg.blob, pImg.fileName);
+          if (currentCompany) {
+            formData.append("companyId", currentCompany.id);
+          }
+          if (curCustom) {
+            formData.append("customPrompt", curCustom.customPrompt);
+            formData.append("modeName", curCustom.name);
+          }
+
+          const res = await fetch("/api/analyze-custom", {
+            method: "POST",
+            body: formData,
+          });
+
+          const contentType = res.headers.get("content-type") || "";
+          let json: AnalyzeApiResponse;
+          if (contentType.includes("application/json")) {
+            json = await res.json();
+          } else {
+            const textError = await res.text();
+            throw new Error(textError.replace(/<[^>]*>?/gm, "").trim() || "サーバーエラーが発生しました");
+          }
+
+          if (!res.ok || !json.success || !json.data) {
+            throw new Error(json.error || `Page ${pageNum} の解析に失敗しました`);
+          }
+
+          const items = json.data;
+          items.forEach((entry) => {
+            entry.pageNumber = pageNum;
+            entry.date = normalizeDateToSeireki(entry.date);
+            allIntegratedItems.push(entry);
+          });
+        }
+
+        const finalIntegratedItems = allIntegratedItems;
+        setInitialBackup((prev) => ({
+          ...prev,
+          [item.id]: JSON.parse(JSON.stringify(finalIntegratedItems)),
+        }));
+        setSelectedPageMap((prev) => ({ ...prev, [item.id]: 1 }));
+
+        setCurrentFiles((prev) =>
+          prev.map((i) =>
+            i.id === item.id
+              ? {
+                  ...i,
+                  status: "completed",
+                  results: finalIntegratedItems,
+                  detectedCount: finalIntegratedItems.length,
+                  progressMessage: undefined,
+                  errorMessage: undefined,
+                }
+              : i
+          )
+        );
+        return;
+      }
+
       // 【ケースC】 単一画像ファイル（領収書画像または通帳単枚画像）の場合の処理
       const formData = new FormData();
       formData.append("file", item.file);
@@ -714,8 +854,17 @@ export default function Home() {
         formData.append("companyId", currentCompany.id);
       }
 
-      const endpoint =
-        appMode === "receipt" ? "/api/analyze" : "/api/analyze-bankbook";
+      let endpoint = "/api/analyze";
+      if (appMode === "bankbook") {
+        endpoint = "/api/analyze-bankbook";
+      } else if (appMode !== "receipt") {
+        endpoint = "/api/analyze-custom";
+        const curCustom = customModes.find((m) => m.id === appMode);
+        if (curCustom) {
+          formData.append("customPrompt", curCustom.customPrompt);
+          formData.append("modeName", curCustom.name);
+        }
+      }
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -1335,6 +1484,43 @@ export default function Home() {
                 >
                   <span>🏦 通帳モード (画像/複数PDF)</span>
                 </button>
+
+                {/* 会社専用カスタムモードタブ */}
+                {customModes.map((mode) => {
+                  const isAct = appMode === mode.id;
+                  return (
+                    <button
+                      key={mode.id}
+                      onClick={() => {
+                        setAppMode(mode.id);
+                        setGlobalError(null);
+                        setSelectedKeys(new Set());
+                        setActiveFileTab("all");
+                      }}
+                      className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
+                        isAct
+                          ? "bg-purple-600 text-white shadow-sm"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                      }`}
+                    >
+                      <span>{mode.icon || "📋"} {mode.name}</span>
+                    </button>
+                  );
+                })}
+
+                {/* 専用モード追加ボタン */}
+                {currentCompany && (
+                  <button
+                    onClick={() => {
+                      setEditingCustomMode(null);
+                      setShowCustomModeModal(true);
+                    }}
+                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50 transition-colors border border-dashed border-indigo-300 ml-1 cursor-pointer"
+                    title="この会社専用のアップロードモードとプロンプトを追加"
+                  >
+                    <span>➕ 専用モード追加</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1431,6 +1617,29 @@ export default function Home() {
                   </button>
                 )}
               </div>
+
+              {activeCustomMode && (
+                <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-xs text-purple-900 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <span>{activeCustomMode.icon || "📋"}</span>
+                      <span>「{activeCustomMode.name}」専用プロンプト適用中</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setEditingCustomMode(activeCustomMode);
+                        setShowCustomModeModal(true);
+                      }}
+                      className="text-[10px] text-purple-700 hover:text-purple-900 font-bold underline cursor-pointer"
+                    >
+                      プロンプトを編集
+                    </button>
+                  </div>
+                  <div className="text-[10px] text-purple-700 line-clamp-2 font-mono whitespace-pre-wrap">
+                    {activeCustomMode.customPrompt}
+                  </div>
+                </div>
+              )}
 
               {/* ドラッグ＆ドロップエリア */}
               <div
