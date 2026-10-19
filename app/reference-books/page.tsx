@@ -193,6 +193,14 @@ export default function ReferenceBooksPage() {
             >
               <span>📖 使い方マニュアル</span>
             </Link>
+            <a
+              href="/manual.pdf"
+              download="AI会計仕訳アプリ_ご利用マニュアル.pdf"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-colors cursor-pointer"
+              title="A4版PDFマニュアルを直接ダウンロード"
+            >
+              <span>📥 PDF</span>
+            </a>
             <CompanySwitcher />
           </div>
         </div>

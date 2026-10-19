@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>AI会計仕訳アプリ ご利用マニュアル</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 16mm 14mm 16mm 14mm;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      line-height: 1.6;
+      font-size: 10pt;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* 表紙 */
+    .cover {
+      page-break-after: always;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 90vh;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .cover-badge {
+      display: inline-block;
+      background-color: #e0e7ff;
+      color: #4338ca;
+      font-weight: bold;
+      font-size: 9pt;
+      padding: 4px 14px;
+      border-radius: 9999px;
+      margin-bottom: 24px;
+      border: 1px solid #c7d2fe;
+    }
+    .cover-icon {
+      font-size: 54pt;
+      margin-bottom: 16px;
+    }
+    .cover-title {
+      font-size: 26pt;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.3;
+      margin: 0 0 16px 0;
+    }
+    .cover-subtitle {
+      font-size: 12pt;
+      color: #475569;
+      margin-bottom: 40px;
+      max-width: 500px;
+    }
+    .cover-meta {
+      margin-top: 60px;
+      padding-top: 20px;
+      border-top: 1px solid #e2e8f0;
+      font-size: 9pt;
+      color: #64748b;
+      width: 100%;
+      max-width: 400px;
+    }
+    .cover-features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      width: 100%;
+      max-width: 600px;
+      margin: 20px auto 0 auto;
+      text-align: left;
+    }
+    .feature-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .feature-card strong {
+      display: block;
+      color: #1e293b;
+      font-size: 9pt;
+      margin-bottom: 4px;
+    }
+    .feature-card p {
+      font-size: 8pt;
+      color: #64748b;
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    /* 目次 */
+    .toc {
+      page-break-after: always;
+      padding-top: 20px;
+    }
+    .toc-title {
+      font-size: 16pt;
+      font-weight: 800;
+      color: #0f172a;
+      border-bottom: 2px solid #4f46e5;
+      padding-bottom: 8px;
+      margin-bottom: 20px;
+    }
+    .toc-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .toc-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 8px;
+      border-bottom: 1px dotted #cbd5e1;
+      font-size: 10pt;
+      font-weight: 600;
+      color: #334155;
+    }
+    .toc-item span:first-child {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* 共通見出し・セクション */
+    .section {
+      page-break-inside: avoid;
+      margin-bottom: 26px;
+    }
+    .page-break {
+      page-break-before: always;
+    }
+    h2 {
+      font-size: 13pt;
+      font-weight: 800;
+      color: #0f172a;
+      background: #f1f5f9;
+      border-left: 4px solid #4f46e5;
+      padding: 8px 12px;
+      margin: 24px 0 12px 0;
+      border-radius: 0 6px 6px 0;
+      break-after: avoid;
+    }
+    h3 {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 16px 0 6px 0;
+      break-after: avoid;
+    }
+    p {
+      margin: 0 0 8px 0;
+    }
+
+    /* カード・ボックス */
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      break-inside: avoid;
+    }
+    .card-primary {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+    }
+    .card-indigo {
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+    }
+    .card-amber {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+    }
+
+    /* ステップグリッド */
+    .step-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin: 14px 0;
+      break-inside: avoid;
+    }
+    .step-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 6px;
+      text-align: center;
+    }
+    .step-badge {
+      display: inline-block;
+      font-size: 7.5pt;
+      font-weight: bold;
+      color: #4338ca;
+      background: #e0e7ff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+    }
+    .step-name {
+      font-size: 8.5pt;
+      font-weight: bold;
+      color: #0f172a;
+      margin-bottom: 2px;
+    }
+    .step-desc {
+      font-size: 7pt;
+      color: #64748b;
+      line-height: 1.3;
+    }
+
+    /* 3つのモード比較グリッド */
+    .modes-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 12px 0;
+      break-inside: avoid;
+    }
+    .mode-col {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 8.5pt;
+    }
+    .mode-col strong {
+      display: block;
+      font-size: 9.5pt;
+      margin-bottom: 6px;
+      color: #0f172a;
+    }
+    .mode-col ul {
+      margin: 6px 0 0 0;
+      padding-left: 16px;
+      color: #475569;
+    }
+    .mode-col li {
+      margin-bottom: 4px;
+    }
+
+    /* 表スタイル */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 8.5pt;
+      break-inside: avoid;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 6px 8px;
+      text-align: left;
+    }
+    th {
+      background: #f1f5f9;
+      font-weight: 700;
+      color: #334155;
+    }
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    /* リスト */
+    ul, ol {
+      margin: 4px 0 8px 0;
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 3px;
+    }
+
+    /* 強調・コールアウト */
+    .callout {
+      border-left: 3px solid #4f46e5;
+      padding: 8px 12px;
+      background: #f8fafc;
+      margin: 10px 0;
+      font-size: 9pt;
+      break-inside: avoid;
+    }
+    .callout strong {
+      color: #4f46e5;
+    }
+
+    .key-badge {
+      display: inline-block;
+      font-family: monospace;
+      font-size: 8pt;
+      background: #e2e8f0;
+      color: #334155;
+      padding: 1px 5px;
+      border-radius: 4px;
+      border: 1px solid #cbd5e1;
+    }
+
+    /* フッター */
+    .footer {
+      font-size: 7.5pt;
+      color: #94a3b8;
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 10px;
+      border-top: 1px solid #e2e8f0;
+      break-inside: avoid;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 表紙 -->
+  <div class="cover">
+    <div class="cover-badge">弥生会計26 完全対応マニュアル</div>
+    <div class="cover-icon">📑</div>
+    <h1 class="cover-title">AI会計仕訳アプリ<br>ご利用マニュアル</h1>
+    <p class="cover-subtitle">
+      紙・PDFの領収書や通帳から、AIが勘定科目・税区分・補助科目を自動判定。<br>
+      会社ごとの過去帳簿を学習して高精度な仕訳データを瞬時に作成します。
+    </p>
+
+    <div class="cover-features">
+      <div class="feature-card">
+        <strong>⚡ 3分で完結</strong>
+        <p>資料をドラッグ＆ドロップするだけでAIが一括で仕訳化</p>
+      </div>
+      <div class="feature-card">
+        <strong>📚 過去帳簿をAI学習</strong>
+        <p>会社独自の勘定科目や摘要の癖をAIが自動学習</p>
+      </div>
+      <div class="feature-card">
+        <strong>🛠️ 専用モードの作成</strong>
+        <p>特定フォーマットの明細もユーザー自身で指示可能</p>
+      </div>
+    </div>
+
+    <div class="cover-meta">
+      <p>対象バージョン: 最新版（マルチテナント・専用モード対応）</p>
+      <p>出力形式: 弥生会計インポート用CSV (Shift-JIS) / 確認用Excel (.xlsx)</p>
+    </div>
+  </div>
+
+  <!-- 目次 -->
+  <div class="toc">
+    <div class="toc-title">目次</div>
+    <ul class="toc-list">
+      <li class="toc-item"><span><span>⚡</span> 1. 全体の流れ（3分で理解）</span><span>P. 3</span></li>
+      <li class="toc-item"><span><span>🏢</span> 2. ログイン・会社管理・メンバー招待</span><span>P. 3</span></li>
+      <li class="toc-item"><span><span>📚</span> 3. 【最重要】過去帳簿のAI学習設定</span><span>P. 4</span></li>
+      <li class="toc-item"><span><span>📑</span> 4. 仕訳作成（3つのアップロードモード）</span><span>P. 5</span></li>
+      <li class="toc-item"><span><span>✏️</span> 5. 仕訳結果の確認・編集・全幅表示</span><span>P. 6</span></li>
+      <li class="toc-item"><span><span>💾</span> 6. 弥生会計CSV / Excelの出力・インポート</span><span>P. 7</span></li>
+      <li class="toc-item"><span><span>📜</span> 7. 解析履歴の確認と復元</span><span>P. 8</span></li>
+      <li class="toc-item"><span><span>❓</span> 8. よくある質問 (FAQ)・トラブルシューティング</span><span>P. 8</span></li>
+    </ul>
+  </div>
+
+  <!-- 本文 P.3 -->
+  <div class="page-break"></div>
+
+  <!-- 1. 全体の流れ -->
+  <div class="section">
+    <h2>1. 全体の流れ（3分で理解）</h2>
+    <p>
+      本アプリは、紙やPDFの領収書・請求書・通帳・独自帳票をアップロードするだけで、AI（Google Gemini）が自動で仕訳を作成し、弥生会計用CSVやExcelとして出力できるクラウドサービスです。
+    </p>
+
+    <div class="step-grid">
+      <div class="step-box">
+        <span class="step-badge">Step 1</span>
+        <div class="step-name">会社を選択</div>
+        <div class="step-desc">作業対象の会社を選択</div>
+      </div>
+      <div class="step-box">
+        <span class="step-badge">Step 2</span>
+        <div class="step-name">過去帳簿を学習</div>
+        <div class="step-desc">前期の仕訳日記帳を登録（初回推奨）</div>
+      </div>
+      <div class="step-box">
+        <span class="step-badge">Step 3</span>
+        <div class="step-name">資料アップロード</div>
+        <div class="step-desc">領収書や通帳をドロップして解析</div>
+      </div>
+      <div class="step-box">
+        <span class="step-badge">Step 4</span>
+        <div class="step-name">確認・編集</div>
+        <div class="step-desc">画面上で仕訳を確認・必要に応じ修正</div>
+      </div>
+      <div class="step-box">
+        <span class="step-badge">Step 5</span>
+        <div class="step-name">弥生CSV出力</div>
+        <div class="step-desc">弥生会計へワンクリック取り込み</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. ログイン・会社管理・招待 -->
+  <div class="section">
+    <h2>2. ログイン・会社管理・メンバー招待</h2>
+
+    <div class="card">
+      <h3>👥 複数会社（マルチテナント）の切り替えと作成</h3>
+      <p>1つのメールアドレスで、複数の会社（顧問先・自社グループ）を完全に分離して管理できます。</p>
+      <ul>
+        <li><strong>会社の切り替え:</strong> 画面右上のヘッダーにある会社名をクリックし、一覧から切り替えます。</li>
+        <li><strong>新しい会社を作成:</strong> ドロップダウン下の「＋ 新しい会社を作成」をクリックして会社名を登録します。作成したユーザーが管理者（Owner）となります。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>✉️ チームメンバーの招待（共同作業）</h3>
+      <p>社内スタッフや会計事務所の担当者を会社スペースに招待できます。</p>
+      <ol>
+        <li>画面右上の会社メニューから<strong>「👥 メンバー管理・招待」</strong>を開きます。</li>
+        <li>招待したいメンバーの<strong>メールアドレス</strong>と<strong>権限（管理者またはメンバー）</strong>を入力して送信します。</li>
+        <li>招待されたメンバーが届いたメールの承認リンクを開くと、即座に同じ会社データを閲覧・編集できるようになります。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 3. 過去帳簿のAI学習設定 -->
+  <div class="page-break"></div>
+
+  <div class="section">
+    <h2>3. 【最重要】過去帳簿のAI学習設定</h2>
+    <div class="card card-indigo">
+      <strong>💡 なぜ過去帳簿の学習が重要なのか？</strong>
+      <p style="margin-top:4px; font-size:8.5pt;">
+        会社ごとに「消耗品費にするか事務用品費にするか」「役員個人カードの精算ルール」「取引先ごとの補助科目」などの社内ルールが異なります。
+        前期の仕訳日記帳を登録しておくだけで、AIがそのルールを自動学習し、次回からの仕訳精度が劇的に向上します。
+      </p>
+    </div>
+
+    <h3>設定手順</h3>
+    <ol>
+      <li>ヘッダー右側の<strong>「📚 過去帳簿の学習設定」</strong>をクリックします。</li>
+      <li><strong>「＋ 新しい帳簿を追加」</strong>をクリックし、帳簿名（例:「2025年度 仕訳日記帳」）を入力します。</li>
+      <li>前期の弥生会計から書き出した<strong>仕訳日記帳CSV</strong>または<strong>テキストファイル</strong>をアップロードします。</li>
+      <li>「登録して学習」をクリックすると、AIが即座に勘定科目の使い方や補助科目のパターンをインデックス化します。</li>
+    </ol>
+
+    <div class="callout">
+      <strong>⚠️ 登録時のヒント:</strong>
+      弥生会計の「仕訳日記帳」→「ファイル」→「エクスポート」から出力したShift-JIS形式のCSVファイルをそのままアップロードできます。文字化けせず自動認識されます。
+    </div>
+  </div>
+
+  <!-- 4. 仕訳作成（3つのアップロードモード） -->
+  <div class="section">
+    <h2>4. 仕訳作成（3つのアップロードモード）</h2>
+    <p>アップロードする資料の種類に合わせて、最適な解析モードを選択できます。</p>
+
+    <div class="modes-grid">
+      <div class="mode-col">
+        <strong>🧾 領収書・請求書モード</strong>
+        <p>紙のレシート写真やPDF請求書向け</p>
+        <ul>
+          <li>支払先・日付・税込金額・適格事業者登録番号（T番号）をOCR解析</li>
+          <li>軽減税率（8%・10%）を自動判別</li>
+          <li>過去帳簿から最適な借方科目を推論</li>
+        </ul>
+      </div>
+      <div class="mode-col">
+        <strong>🏦 通帳モード</strong>
+        <p>銀行通帳のコピー・PDF明細向け</p>
+        <ul>
+          <li>預金取引の入出金・残高を時系列で解析</li>
+          <li>入金（売掛金回収・利息等）と出金（振込・引落等）を自動仕訳</li>
+          <li>相手科目（普通預金等）を適切にセット</li>
+        </ul>
+      </div>
+      <div class="mode-col card-amber">
+        <strong>🛠️ 専用モード（カスタム）</strong>
+        <p>特定書式・特殊明細向け</p>
+        <ul>
+          <li>会社独自の資料（売上明細、クレカCSV、EC管理画面）向け</li>
+          <li>ユーザー自身で専用プロンプト（指示文）を自由に定義可能</li>
+          <li>固定科目や摘要ルールをピンポイント指定</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🛠️ 専用モードの作成方法</h3>
+      <ol>
+        <li>アップロード画面のモードタブ右端にある<strong>「＋ 専用モードを追加」</strong>をクリック。</li>
+        <li><strong>モード名</strong>（例：「Amazonビジネス明細用」「Airレジ月次売上用」など）を入力。</li>
+        <li><strong>専用の解析プロンプト</strong>（AIへの指示）を記述します。<br>
+          <span style="color:#64748b; font-size:8pt;">（例：「この資料はAmazonの購入明細です。書籍は新聞図書費、PC周辺機器は消耗品費に仕訳し、摘要には注文番号を必ず含めてください」）</span>
+        </li>
+        <li>「保存」を押すとタブに追加され、次からはそのタブを選んでファイルを投げるだけで独自ルールが適用されます。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 5. 仕訳結果の確認・編集・全幅表示 -->
+  <div class="page-break"></div>
+
+  <div class="section">
+    <h2>5. 仕訳結果の確認・編集・全幅表示</h2>
+    <p>AIが生成した仕訳は、弥生会計の仕訳日記帳と同等の見やすいスプリットビュー画面で確認・編集できます。</p>
+
+    <div class="card">
+      <h3>👀 分割ビュー（左: 資料画像 / 右: 仕訳表）</h3>
+      <p>左側にアップロードした元の領収書画像やPDFが表示され、右側にAIが作成した仕訳一覧が並びます。元資料を見比べながら検算できます。</p>
+    </div>
+
+    <div class="card">
+      <h3>✏️ 表の直接編集・行追加・削除</h3>
+      <ul>
+        <li><strong>直接編集:</strong> 日付、借方科目、貸方科目、金額、税区分、摘要のセルをクリックしてキーボードから直接打ち直せます。</li>
+        <li><strong>行追加:</strong> 表下部の「＋ 行を追加」ボタンで手動で新しい仕訳行を追加できます。</li>
+        <li><strong>行削除:</strong> 各行の右端にあるゴミ箱アイコンで不要な行を削除できます。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>🖥️ 全幅表示モード（ワイド表示）</h3>
+      <p>
+        ノートパソコン等の小さな画面で仕訳表が狭く感じる場合は、画面上部の<strong>「↔️ 全幅表示」</strong>ボタンを押してください。
+        左側のプレビューが折りたたまれ、仕訳一覧が画面いっぱいに広がり快適に編集・確認できます。再度押すと元の分割表示に戻ります。
+      </p>
+    </div>
+  </div>
+
+  <!-- 6. 弥生会計CSV・Excelの出力 -->
+  <div class="section">
+    <h2>6. 弥生会計CSV / Excelの出力・インポート</h2>
+    <p>編集が完了したら、会計ソフトへの取り込みデータを出力します。</p>
+
+    <div class="modes-grid" style="grid-template-columns: 1fr 1fr;">
+      <div class="mode-col card-primary">
+        <strong>📥 弥生会計インポート用CSV出力</strong>
+        <p>弥生会計26の標準フォーマット（Shift-JIS、25列カンマ区切り）に準拠したCSVを一発ダウンロードします。</p>
+      </div>
+      <div class="mode-col card-indigo">
+        <strong>📊 Excel出力 (.xlsx)</strong>
+        <p>社内チェックや上司・クライアントへの事前確認用に、罫線やヘッダーが綺麗に装飾されたExcelファイルをダウンロードします。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🚀 弥生会計へのインポート手順</h3>
+      <ol>
+        <li>弥生会計を起動し、対象の事業所データを開きます。</li>
+        <li>メニューバーから<strong>「帳簿・伝票」</strong>→<strong>「仕訳日記帳」</strong>を開きます。</li>
+        <li>上部メニューの<strong>「ファイル」</strong>→<strong>「インポート」</strong>をクリックします。</li>
+        <li>本アプリからダウンロードしたCSVファイルを選択します。</li>
+        <li>インポート形式の確認画面でそのまま「開始」をクリックすると、すべての仕訳が一瞬で登録されます！</li>
+      </ol>
+      <div class="callout">
+        <strong>💡 エラーが出た場合のチェックポイント:</strong>
+        弥生会計側の勘定科目マスタに存在しない科目名や補助科目名が含まれているとエラーになります。その場合は、事前に弥生会計に科目を登録するか、本アプリの画面上で既存の科目に修正してから再度CSVを書き出してください。
+      </div>
+    </div>
+  </div>
+
+  <!-- 7 & 8. 履歴とFAQ -->
+  <div class="page-break"></div>
+
+  <div class="section">
+    <h2>7. 解析履歴の確認と復元</h2>
+    <p>過去にアップロードして解析した仕訳データは、会社ごとに安全にクラウドに保存されています。</p>
+    <div class="card">
+      <ul>
+        <li>画面下部の<strong>「📜 過去の解析履歴」</strong>に、過去に実行した解析が時系列で保存されています。</li>
+        <li><strong>「表示」ボタン:</strong> 当時の仕訳結果を即座に画面に復元し、再編集やCSVの再ダウンロードが可能です。</li>
+        <li>ブラウザを閉じてしまったりPCが再起動しても、いつでも作業を再開できます。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>8. よくある質問 (FAQ)・トラブルシューティング</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 32%;">質問 / 困ったとき</th>
+          <th>回答と対処法</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>PDFやスマホの写真がうまく読み取れない</strong></td>
+          <td>
+            ピントがぼけていないか、影や斜めの歪みが強すぎないかご確認ください。また、1ファイルあたりのページ数が多すぎる場合は、数枚ずつに分割してアップロードすると精度が向上します。
+          </td>
+        </tr>
+        <tr>
+          <td><strong>弥生会計へのインポート時に科目エラーが出る</strong></td>
+          <td>
+            弥生会計のマスタに登録されていない勘定科目・補助科目がある可能性があります。画面上で直接セルを編集して既存の科目に修正するか、過去帳簿の学習設定に最新の仕訳日記帳を登録してください。
+          </td>
+        </tr>
+        <tr>
+          <td><strong>インボイス（適格請求書）の税区分はどうなる？</strong></td>
+          <td>
+            資料上に「T+13桁」の登録番号が記載されているかをAIが自動確認し、適格事業者の場合は通常の課税仕入れ、記載がない場合は免税事業者等からの仕入れ（経過措置等）に応じた税区分候補を提案します。
+          </td>
+        </tr>
+        <tr>
+          <td><strong>専用モードを追加ボタンが押せない</strong></td>
+          <td>
+            会社が選択されているか確認してください。また、権限がメンバーの場合でも追加可能ですが、ブラウザのキャッシュを一度更新（リロード）してお試しください。
+          </td>
+        </tr>
+        <tr>
+          <td><strong>アップロードしたデータや領収書の機密性は？</strong></td>
+          <td>
+            データは暗号化通信で保護され、マルチテナント機能により他社から閲覧することはできません。また、アップロードされたデータがAIの公開学習データに再利用されることはありません。
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    AI会計仕訳アプリ ご利用マニュアル | 弥生会計26完全対応 | 発行日: 2026年10月
+  </div>
+
+</body>
+</html>

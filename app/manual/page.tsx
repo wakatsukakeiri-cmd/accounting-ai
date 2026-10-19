@@ -26,8 +26,8 @@ export default function ManualPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
       {/* 固定ヘッダー */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs print:hidden">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link
               href="/"
@@ -43,21 +43,44 @@ export default function ManualPage() {
               </h1>
             </div>
           </div>
-          <span className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full font-bold">
-            弥生会計26完全対応
-          </span>
+          
+          <div className="flex items-center gap-2">
+            <span className="hidden md:inline-block text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full font-bold">
+              弥生会計26完全対応
+            </span>
+
+            <button
+              onClick={() => window.print()}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer shadow-xs"
+              title="この画面を印刷またはPDFとして保存"
+            >
+              <span>🖨️</span>
+              <span>印刷 / 画面保存</span>
+            </button>
+
+            <a
+              href="/manual.pdf"
+              download="AI会計仕訳アプリ_ご利用マニュアル.pdf"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-all shadow-xs cursor-pointer active:scale-95"
+              title="A4サイズ・全7ページのPDFマニュアルを直接ダウンロード"
+            >
+              <span>📥</span>
+              <span>PDFマニュアルをダウンロード</span>
+            </a>
+          </div>
         </div>
       </header>
 
       {/* メインレイアウト */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 print:p-0 print:max-w-none">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
           {/* 左側：目次ナビゲーション（sticky） */}
-          <aside className="md:col-span-4 lg:col-span-3 sticky top-20 space-y-1 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
-            <div className="px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              目次
-            </div>
-            {SECTIONS.map((sec) => {
+          <aside className="md:col-span-4 lg:col-span-3 sticky top-20 space-y-4 print:hidden">
+            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+              <div className="px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                目次
+              </div>
+              {SECTIONS.map((sec) => {
               const isCur = activeSection === sec.id
               return (
                 <button
@@ -80,10 +103,30 @@ export default function ManualPage() {
                 </button>
               )
             })}
+            </div>
+
+            {/* サイドバー内 PDFダウンロードボックス */}
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-4 rounded-2xl border border-indigo-100 shadow-xs space-y-2.5">
+              <div className="flex items-center gap-2 text-indigo-700">
+                <span className="text-lg">📄</span>
+                <span className="text-xs font-extrabold">PDFマニュアル</span>
+              </div>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                印刷やオフラインでの確認、社内共有に最適なA4版PDF（全7ページ）です。
+              </p>
+              <a
+                href="/manual.pdf"
+                download="AI会計仕訳アプリ_ご利用マニュアル.pdf"
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95 text-center cursor-pointer"
+              >
+                <span>📥</span>
+                <span>PDFをダウンロード</span>
+              </a>
+            </div>
           </aside>
 
           {/* 右側：マニュアル本文 */}
-          <main className="md:col-span-8 lg:col-span-9 space-y-8">
+          <main className="md:col-span-8 lg:col-span-9 space-y-8 print:col-span-12 print:w-full print:space-y-6">
             {/* 1. 全体の流れ */}
             <section id="flow" className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4 scroll-mt-20">
               <div className="flex items-center gap-2 text-indigo-600">

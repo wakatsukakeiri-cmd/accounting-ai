@@ -1440,6 +1440,15 @@ export default function Home() {
                 <span>📖 使い方マニュアル</span>
               </Link>
 
+              <a
+                href="/manual.pdf"
+                download="AI会計仕訳アプリ_ご利用マニュアル.pdf"
+                className="flex items-center gap-1.5 rounded-xl bg-white hover:bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 border border-indigo-200 transition-all shadow-sm cursor-pointer"
+                title="A4版PDFマニュアルを直接ダウンロード"
+              >
+                <span>📥 PDF</span>
+              </a>
+
               <button
                 onClick={async () => {
                   setShowHistoryModal(true);
