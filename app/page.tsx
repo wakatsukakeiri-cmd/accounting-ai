@@ -1432,6 +1432,14 @@ export default function Home() {
                 </Link>
               )}
 
+              <Link
+                href="/manual"
+                className="flex items-center gap-1.5 rounded-xl bg-white hover:bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 border border-slate-300 transition-all shadow-sm"
+                title="初心者向けの使い方マニュアルを確認"
+              >
+                <span>📖 使い方マニュアル</span>
+              </Link>
+
               <button
                 onClick={async () => {
                   setShowHistoryModal(true);

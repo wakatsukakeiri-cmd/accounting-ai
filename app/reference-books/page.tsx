@@ -187,6 +187,12 @@ export default function ReferenceBooksPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <Link
+              href="/manual"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <span>📖 使い方マニュアル</span>
+            </Link>
             <CompanySwitcher />
           </div>
         </div>
